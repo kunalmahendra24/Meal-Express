@@ -32,6 +32,19 @@ const MealsManagement = () => {
         fetchMeals({ search, category: categoryFilter !== 'all' ? categoryFilter : undefined });
     }, [fetchMeals, categoryFilter]);
 
+    useEffect(() => {
+        if (!showModal) return;
+
+        const previousOverflow = document.body.style.overflow;
+        document.body.style.overflow = 'hidden';
+        window.lenis?.stop?.();
+
+        return () => {
+            document.body.style.overflow = previousOverflow;
+            window.lenis?.start?.();
+        };
+    }, [showModal]);
+
     const handleSearch = (e) => {
         e.preventDefault();
         fetchMeals({ search, category: categoryFilter !== 'all' ? categoryFilter : undefined });
@@ -298,23 +311,24 @@ const MealsManagement = () => {
 
             {/* Add/Edit Modal */}
             {showModal && (
-                <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
-                    <div
-                        data-lenis-prevent
-                        className="bg-white rounded-xl max-w-2xl w-full max-h-[90vh] flex flex-col overflow-hidden"
-                        onWheel={(e) => e.stopPropagation()}
-                    >
-                        <div className="flex items-center justify-between p-4 border-b shrink-0">
-                            <h2 className="text-lg font-semibold">
-                                {editingMeal ? 'Edit Meal' : 'Add New Meal'}
-                            </h2>
-                            <button onClick={closeModal} className="p-2 hover:bg-gray-100 rounded-lg">
-                                <X className="w-5 h-5" />
-                            </button>
-                        </div>
+                <div
+                    className="fixed inset-0 z-50 bg-black/50 overflow-y-auto overscroll-contain"
+                    data-lenis-prevent
+                    onWheel={(e) => e.stopPropagation()}
+                    onTouchMove={(e) => e.stopPropagation()}
+                >
+                    <div className="min-h-full flex items-start justify-center p-4 sm:p-6">
+                        <div className="bg-white rounded-xl max-w-2xl w-full my-4 shadow-xl">
+                            <div className="flex items-center justify-between p-4 border-b">
+                                <h2 className="text-lg font-semibold">
+                                    {editingMeal ? 'Edit Meal' : 'Add New Meal'}
+                                </h2>
+                                <button onClick={closeModal} className="p-2 hover:bg-gray-100 rounded-lg">
+                                    <X className="w-5 h-5" />
+                                </button>
+                            </div>
 
-                        <form onSubmit={handleSubmit} className="flex flex-col flex-1 min-h-0">
-                        <div className="p-4 space-y-4 overflow-y-auto flex-1 min-h-0 overscroll-contain">
+                            <form onSubmit={handleSubmit} className="p-4 space-y-4">
                             <div className="grid sm:grid-cols-2 gap-4">
                                 <div>
                                     <label className="block text-sm font-medium text-gray-700 mb-1">Name *</label>
@@ -466,8 +480,7 @@ const MealsManagement = () => {
                                 <label htmlFor="isAvailable" className="text-sm text-gray-700">Available for ordering</label>
                             </div>
 
-                            </div>
-                            <div className="flex space-x-4 p-4 border-t shrink-0 bg-white">
+                            <div className="flex space-x-4 pt-4 border-t">
                                 <button
                                     type="submit"
                                     disabled={loading}
@@ -483,7 +496,8 @@ const MealsManagement = () => {
                                     Cancel
                                 </button>
                             </div>
-                        </form>
+                            </form>
+                        </div>
                     </div>
                 </div>
             )}
