@@ -75,10 +75,13 @@ export const AppProvider = ({ children }) => {
                 setUser(response.data.user);
                 setIsAuthenticated(true);
             }
-        } catch {
-            clearAuthToken();
-            setUser(null);
-            setIsAuthenticated(false);
+        } catch (err) {
+            const status = err.response?.status;
+            if (status === 401 || status === 403) {
+                clearAuthToken();
+                setUser(null);
+                setIsAuthenticated(false);
+            }
         } finally {
             setAuthLoading(false);
         }
@@ -133,12 +136,13 @@ export const AppProvider = ({ children }) => {
     const logout = async () => {
         try {
             await axios.post(`${API_URL}/api/auth/logout`);
-            clearAuthToken();
-            setUser(null);
-            setIsAuthenticated(false);
             toast.success('Logged out successfully');
         } catch (error) {
             console.error('Logout error:', error);
+        } finally {
+            clearAuthToken();
+            setUser(null);
+            setIsAuthenticated(false);
         }
     };
 

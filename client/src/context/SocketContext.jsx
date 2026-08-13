@@ -1,6 +1,6 @@
 import { createContext, useContext, useEffect, useRef, useState } from 'react';
 import { io } from 'socket.io-client';
-import { useApp } from './AppContext';
+import { useApp, getAuthToken } from './AppContext';
 
 const SocketContext = createContext(null);
 
@@ -27,7 +27,7 @@ export const SocketProvider = ({ children }) => {
             withCredentials: true,
             transports: ['websocket', 'polling'],
             auth: {
-                token: localStorage.getItem('mealExpressAuthToken')
+                token: getAuthToken()
             }
         });
 

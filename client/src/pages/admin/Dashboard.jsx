@@ -2,6 +2,7 @@ import { useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { useAdmin } from '../../context/AdminContext';
 import { useSocket } from '../../context/SocketContext';
+import { useApp } from '../../context/AppContext';
 import LoadingSpinner from '../../components/LoadingSpinner';
 import { 
     Users, 
@@ -16,11 +17,13 @@ import {
 
 const Dashboard = () => {
     const { dashboardStats, fetchDashboardStats, loading } = useAdmin();
+    const { authLoading, isAuthenticated, user } = useApp();
     const socket = useSocket();
 
     useEffect(() => {
+        if (authLoading || !isAuthenticated || !user) return;
         fetchDashboardStats();
-    }, [fetchDashboardStats]);
+    }, [authLoading, isAuthenticated, user, fetchDashboardStats]);
 
     useEffect(() => {
         if (!socket) return;
@@ -42,7 +45,7 @@ const Dashboard = () => {
         };
     }, [socket, fetchDashboardStats]);
 
-    if (loading || !dashboardStats) {
+    if (authLoading || loading || !dashboardStats) {
         return (
             <div className="flex items-center justify-center h-64">
                 <LoadingSpinner size="large" />
