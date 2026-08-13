@@ -12,7 +12,7 @@ const AUTH_TOKEN_KEY = 'mealExpressAuthToken';
 axios.defaults.withCredentials = true;
 
 axios.interceptors.request.use((config) => {
-    const token = sessionStorage.getItem(AUTH_TOKEN_KEY);
+    const token = localStorage.getItem(AUTH_TOKEN_KEY);
     if (token) {
         config.headers.Authorization = `Bearer ${token}`;
     }
@@ -21,15 +21,15 @@ axios.interceptors.request.use((config) => {
 
 const persistAuthToken = (token) => {
     if (token) {
-        sessionStorage.setItem(AUTH_TOKEN_KEY, token);
+        localStorage.setItem(AUTH_TOKEN_KEY, token);
     }
 };
 
 const clearAuthToken = () => {
-    sessionStorage.removeItem(AUTH_TOKEN_KEY);
+    localStorage.removeItem(AUTH_TOKEN_KEY);
 };
 
-export const getAuthToken = () => sessionStorage.getItem(AUTH_TOKEN_KEY);
+export const getAuthToken = () => localStorage.getItem(AUTH_TOKEN_KEY);
 
 export const AppProvider = ({ children }) => {
     // Auth state

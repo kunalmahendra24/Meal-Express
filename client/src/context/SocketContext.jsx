@@ -27,7 +27,7 @@ export const SocketProvider = ({ children }) => {
             withCredentials: true,
             transports: ['websocket', 'polling'],
             auth: {
-                token: sessionStorage.getItem('mealExpressAuthToken')
+                token: localStorage.getItem('mealExpressAuthToken')
             }
         });
 
