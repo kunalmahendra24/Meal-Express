@@ -19,7 +19,7 @@ import subscriptionRouter from './routes/subscription.routes.js';
 import settingsRouter from './routes/settings.routes.js';
 import adminRouter from './routes/admin.routes.js';
 
-dotenv.config();
+dotenv.config({ quiet: true });
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -34,16 +34,6 @@ if (!fs.existsSync(uploadsDir)) {
 const app = express();
 const server = http.createServer(app);
 const port = process.env.PORT || 4000;
-
-// Connect to database
-connectDB().then(async () => {
-    try {
-        await Settings.initializeDefaults();
-        console.log('Default settings initialized');
-    } catch (error) {
-        console.error('Error initializing settings:', error);
-    }
-});
 
 const allowedOrigins = [
     'http://localhost:5173',
@@ -145,6 +135,15 @@ app.use((req, res) => {
     });
 });
 
-server.listen(port, () => {
-    console.log(`🍽️  Meal Express server is running on port ${port}`);
+connectDB().then(async () => {
+    try {
+        await Settings.initializeDefaults();
+        console.log('Default settings initialized');
+    } catch (error) {
+        console.error('Error initializing settings:', error);
+    }
+
+    server.listen(port, () => {
+        console.log(`🍽️  Meal Express server is running on port ${port}`);
+    });
 });

@@ -1,11 +1,12 @@
 import jwt from 'jsonwebtoken';
 import userModel from '../models/userModel.js';
 import dotenv from 'dotenv';
-dotenv.config();
+import { getTokenFromRequest } from '../utils/authToken.js';
+dotenv.config({ quiet: true });
 
 // Admin authentication middleware
 const adminMiddleware = async (req, res, next) => {
-    const token = req.cookies.token;
+    const token = getTokenFromRequest(req);
 
     if (!token) {
         return res.status(401).json({ 
@@ -63,7 +64,7 @@ const adminMiddleware = async (req, res, next) => {
 
 // Super admin middleware
 const superAdminMiddleware = async (req, res, next) => {
-    const token = req.cookies.token;
+    const token = getTokenFromRequest(req);
 
     if (!token) {
         return res.status(401).json({ 

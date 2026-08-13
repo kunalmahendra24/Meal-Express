@@ -1,7 +1,7 @@
 import { Server } from 'socket.io';
-import cookie from 'cookie';
 import jwt from 'jsonwebtoken';
 import userModel from '../models/userModel.js';
+import { getTokenFromSocket } from '../utils/authToken.js';
 
 export const initSocket = (httpServer, allowedOrigins) => {
     const io = new Server(httpServer, {
@@ -13,13 +13,7 @@ export const initSocket = (httpServer, allowedOrigins) => {
 
     io.use(async (socket, next) => {
         try {
-            const rawCookie = socket.handshake.headers.cookie;
-            if (!rawCookie) {
-                return next(new Error('unauthorized'));
-            }
-
-            const parsed = cookie.parse(rawCookie);
-            const token = parsed.token;
+            const token = getTokenFromSocket(socket);
             if (!token) {
                 return next(new Error('unauthorized'));
             }

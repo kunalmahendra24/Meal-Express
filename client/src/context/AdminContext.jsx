@@ -38,6 +38,15 @@ export const AdminProvider = ({ children }) => {
             }
         } catch (error) {
             toast.error('Failed to fetch dashboard stats');
+            setDashboardStats({
+                overview: { totalUsers: 0, totalMeals: 0, totalOrders: 0, activeSubscriptions: 0 },
+                orders: { today: 0, thisWeek: 0, thisMonth: 0 },
+                revenue: { today: 0, thisWeek: 0, thisMonth: 0, total: 0 },
+                orderStatusBreakdown: {},
+                recentOrders: [],
+                dailyOrders: [],
+                topMeals: []
+            });
         } finally {
             setLoading(false);
         }

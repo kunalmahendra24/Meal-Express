@@ -1,9 +1,10 @@
 import jwt from 'jsonwebtoken';
 import dotenv from 'dotenv';
-dotenv.config();
+import { getTokenFromRequest } from '../utils/authToken.js';
+dotenv.config({ quiet: true });
 
 const authMiddleware = (req, res, next) => {
-  const token = req.cookies?.token;
+  const token = getTokenFromRequest(req);
 
   if (!token) {
     return res.status(401).json({ success: false, message: "No token, authorization denied" });

@@ -25,7 +25,10 @@ export const SocketProvider = ({ children }) => {
 
         const instance = io(API_URL, {
             withCredentials: true,
-            transports: ['websocket', 'polling']
+            transports: ['websocket', 'polling'],
+            auth: {
+                token: sessionStorage.getItem('mealExpressAuthToken')
+            }
         });
 
         socketRef.current = instance;

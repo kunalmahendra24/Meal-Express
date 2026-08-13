@@ -4,18 +4,8 @@ import jwt from "jsonwebtoken";
 import dotenv from "dotenv";
 import transporter from "../nodemailer.js";
 import { EMAIL_VERIFY_TEMPLATE, PASSWORD_RESET_TEMPLATE } from "../config/emailTemplates.js";
-dotenv.config();
-
-const getCookieOptions = () => {
-    const isProduction = process.env.NODE_ENV === 'production';
-    return {
-        httpOnly: true,
-        secure: isProduction,
-        sameSite: isProduction ? 'None' : 'Lax',
-        maxAge: 7 * 24 * 60 * 60 * 1000,
-        path: '/'
-    };
-};
+import { getCookieOptions } from "../utils/authToken.js";
+dotenv.config({ quiet: true });
 
 const sanitizeUser = (user) => {
     const safe = user.toObject ? user.toObject() : { ...user };
@@ -54,7 +44,13 @@ export const register = async (req, res) => {
         }
 
         const hashedPassword = await bcrypt.hash(password, 10);
-        const user = new userModel({ name, email: normalizedEmail, password: hashedPassword });
+        const isFirstUser = (await userModel.countDocuments()) === 0;
+        const user = new userModel({
+            name,
+            email: normalizedEmail,
+            password: hashedPassword,
+            role: isFirstUser ? 'super_admin' : 'user'
+        });
         await user.save();
 
         if (!process.env.JWT_SECRET) {
@@ -74,7 +70,8 @@ export const register = async (req, res) => {
         return res.status(201).json({
             success: true,
             message: "User registered successfully",
-            user: sanitizeUser(user)
+            user: sanitizeUser(user),
+            token
         });
     } catch (error) {
         res.status(500).json({ success: false, message: "Server error", error: error.message });
@@ -111,7 +108,12 @@ export const login = async (req, res) => {
         user.lastLogin = new Date();
         await user.save();
 
-        return res.status(200).json({ success: true, message: "Login successful", user: sanitizeUser(user) });
+        return res.status(200).json({
+            success: true,
+            message: "Login successful",
+            user: sanitizeUser(user),
+            token
+        });
     } catch (error) {
         res.status(500).json({ success: false, message: "Server error", error: error.message });
     }

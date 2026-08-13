@@ -6,9 +6,30 @@ const AppContext = createContext();
 
 // API base URL
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:4000';
+const AUTH_TOKEN_KEY = 'mealExpressAuthToken';
 
 // Configure axios defaults
 axios.defaults.withCredentials = true;
+
+axios.interceptors.request.use((config) => {
+    const token = sessionStorage.getItem(AUTH_TOKEN_KEY);
+    if (token) {
+        config.headers.Authorization = `Bearer ${token}`;
+    }
+    return config;
+});
+
+const persistAuthToken = (token) => {
+    if (token) {
+        sessionStorage.setItem(AUTH_TOKEN_KEY, token);
+    }
+};
+
+const clearAuthToken = () => {
+    sessionStorage.removeItem(AUTH_TOKEN_KEY);
+};
+
+export const getAuthToken = () => sessionStorage.getItem(AUTH_TOKEN_KEY);
 
 export const AppProvider = ({ children }) => {
     // Auth state
@@ -55,6 +76,7 @@ export const AppProvider = ({ children }) => {
                 setIsAuthenticated(true);
             }
         } catch {
+            clearAuthToken();
             setUser(null);
             setIsAuthenticated(false);
         } finally {
@@ -67,6 +89,7 @@ export const AppProvider = ({ children }) => {
             setLoading(true);
             const response = await axios.post(`${API_URL}/api/auth/login`, { email, password });
             if (response.data.success) {
+                persistAuthToken(response.data.token);
                 setUser(response.data.user);
                 setIsAuthenticated(true);
                 toast.success('Login successful!');
@@ -89,6 +112,7 @@ export const AppProvider = ({ children }) => {
             setLoading(true);
             const response = await axios.post(`${API_URL}/api/auth/register`, { name, email, password });
             if (response.data.success) {
+                persistAuthToken(response.data.token);
                 setUser(response.data.user);
                 setIsAuthenticated(true);
                 toast.success('Registration successful!');
@@ -109,6 +133,7 @@ export const AppProvider = ({ children }) => {
     const logout = async () => {
         try {
             await axios.post(`${API_URL}/api/auth/logout`);
+            clearAuthToken();
             setUser(null);
             setIsAuthenticated(false);
             toast.success('Logged out successfully');
