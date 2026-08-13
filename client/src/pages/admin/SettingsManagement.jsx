@@ -50,15 +50,6 @@ const SettingsManagement = () => {
         return setting?.value;
     };
 
-    const handleSave = async (key, value, description) => {
-        setSaving(true);
-        const result = await updateSetting(key, value, description);
-        if (result.success) {
-            await fetchPublicSettings(); // Refresh public settings
-        }
-        setSaving(false);
-    };
-
     const handleToggleCallOwner = async () => {
         await toggleCallOwner();
         await fetchPublicSettings();

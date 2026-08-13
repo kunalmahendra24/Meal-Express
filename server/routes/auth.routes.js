@@ -1,4 +1,4 @@
-import express, { Router } from 'express';
+import express from 'express';
 import { logout,login, register } from '../controller/auth.controller.js';
 import authMiddleware from '../middleware/user.auth.js';
 import { sendResetOtp,sendVerifyOtp,resetPassword,verifyAccount } from '../controller/auth.controller.js';

@@ -1,12 +1,15 @@
 import { useState, useEffect } from 'react';
+import { toast } from 'react-toastify';
 import { useAdmin } from '../../context/AdminContext';
 import { useApp } from '../../context/AppContext';
+import { useSocket } from '../../context/SocketContext';
 import LoadingSpinner from '../../components/LoadingSpinner';
 import { Search, Filter, Eye, Package, Clock, CheckCircle, Truck, XCircle, AlertCircle } from 'lucide-react';
 
 const OrdersManagement = () => {
-    const { orders, fetchOrders, updateOrderStatus, pagination, loading } = useAdmin();
+    const { orders, fetchOrders, updateOrderStatus, pagination, loading, prependLiveOrder, applyLiveOrderStatus } = useAdmin();
     const { API_URL } = useApp();
+    const socket = useSocket();
     
     const [statusFilter, setStatusFilter] = useState('all');
     const [selectedOrder, setSelectedOrder] = useState(null);
@@ -15,6 +18,47 @@ const OrdersManagement = () => {
     useEffect(() => {
         fetchOrders({ status: statusFilter !== 'all' ? statusFilter : undefined });
     }, [fetchOrders, statusFilter]);
+
+    useEffect(() => {
+        if (!socket) return;
+
+        const onNewOrder = (payload) => {
+            if (statusFilter === 'all' || payload.status === statusFilter) {
+                prependLiveOrder(payload);
+            }
+            toast.success('New order received');
+        };
+
+        const onStatusUpdated = (payload) => {
+            applyLiveOrderStatus(payload);
+            setSelectedOrder(prev => {
+                if (!prev || (prev._id !== payload.orderId && prev._id?.toString() !== payload.orderId)) {
+                    return prev;
+                }
+                return {
+                    ...prev,
+                    status: payload.status,
+                    statusHistory: payload.statusHistory || prev.statusHistory,
+                    estimatedDeliveryTime: payload.estimatedDeliveryTime ?? prev.estimatedDeliveryTime,
+                    actualDeliveryTime: payload.actualDeliveryTime ?? prev.actualDeliveryTime
+                };
+            });
+        };
+
+        const onReconnect = () => {
+            fetchOrders({ status: statusFilter !== 'all' ? statusFilter : undefined });
+        };
+
+        socket.on('order:new', onNewOrder);
+        socket.on('order:statusUpdated', onStatusUpdated);
+        socket.io.on('reconnect', onReconnect);
+
+        return () => {
+            socket.off('order:new', onNewOrder);
+            socket.off('order:statusUpdated', onStatusUpdated);
+            socket.io.off('reconnect', onReconnect);
+        };
+    }, [socket, statusFilter, prependLiveOrder, applyLiveOrderStatus, fetchOrders]);
 
     const getStatusIcon = (status) => {
         switch (status) {

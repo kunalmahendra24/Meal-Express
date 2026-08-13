@@ -5,6 +5,7 @@ import 'react-toastify/dist/ReactToastify.css';
 import Lenis from 'lenis';
 
 import { AppProvider } from './context/AppContext';
+import { SocketProvider } from './context/SocketContext';
 import Navbar from './components/Navbar';
 import Footer from './components/Footer';
 
@@ -20,6 +21,7 @@ import Profile from './pages/Profile';
 import Login from './pages/Login';
 import Register from './pages/Register';
 import ResetPassword from './pages/ResetPassword';
+import EmailVerify from './pages/EmailVerify';
 
 // Admin Pages
 import AdminLayout from './pages/admin/AdminLayout';
@@ -84,6 +86,7 @@ const LenisWrapper = ({ children }) => {
 function App() {
     return (
         <AppProvider>
+            <SocketProvider>
             <Router>
                 <LenisWrapper>
                 <ScrollToTop />
@@ -102,6 +105,7 @@ function App() {
                     <Route path="/login" element={<Login />} />
                     <Route path="/register" element={<Register />} />
                     <Route path="/reset-password" element={<ResetPassword />} />
+                    <Route path="/email-verify" element={<EmailVerify />} />
 
                     {/* Admin Routes */}
                     <Route path="/admin" element={<AdminLayout />}>
@@ -141,7 +145,8 @@ function App() {
                     theme="light"
                 />
                 </LenisWrapper>
-            </Router>
+                </Router>
+            </SocketProvider>
         </AppProvider>
     );
 }

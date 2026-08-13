@@ -7,7 +7,7 @@ import { ArrowLeft, Minus, Plus, ShoppingCart, Star, Clock, Users, Leaf, Drumsti
 
 const MealDetails = () => {
     const { id } = useParams();
-    const { API_URL, addToCart, isAuthenticated } = useApp();
+    const { API_URL, addToCart } = useApp();
     const [meal, setMeal] = useState(null);
     const [loading, setLoading] = useState(true);
     const [quantity, setQuantity] = useState(1);

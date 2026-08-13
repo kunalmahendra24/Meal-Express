@@ -284,6 +284,40 @@ export const AdminProvider = ({ children }) => {
         }
     };
 
+    const prependLiveOrder = useCallback((payload) => {
+        const newOrder = {
+            _id: payload.orderId,
+            status: payload.status,
+            totalAmount: payload.totalAmount,
+            user: payload.user,
+            createdAt: payload.createdAt,
+            items: []
+        };
+
+        setOrders(prev => {
+            if (prev.some(order => order._id === payload.orderId || order._id?.toString() === payload.orderId)) {
+                return prev;
+            }
+            return [newOrder, ...prev];
+        });
+        setPagination(prev => ({ ...prev, total: (prev.total || 0) + 1 }));
+    }, []);
+
+    const applyLiveOrderStatus = useCallback((payload) => {
+        setOrders(prev => prev.map(order => {
+            if (order._id !== payload.orderId && order._id?.toString() !== payload.orderId) {
+                return order;
+            }
+            return {
+                ...order,
+                status: payload.status,
+                statusHistory: payload.statusHistory || order.statusHistory,
+                estimatedDeliveryTime: payload.estimatedDeliveryTime ?? order.estimatedDeliveryTime,
+                actualDeliveryTime: payload.actualDeliveryTime ?? order.actualDeliveryTime
+            };
+        }));
+    }, []);
+
     const value = {
         // Dashboard
         dashboardStats,
@@ -301,6 +335,8 @@ export const AdminProvider = ({ children }) => {
         orders,
         fetchOrders,
         updateOrderStatus,
+        prependLiveOrder,
+        applyLiveOrderStatus,
         
         // Users
         users,

@@ -105,9 +105,18 @@ const userSchema = new mongoose.Schema({
     }
 }, { timestamps: true });
 
-// Index for queries
-userSchema.index({ email: 1 });
 userSchema.index({ role: 1 });
 
-const userModel = mongoose.models.users || mongoose.model('user', userSchema);
+userSchema.set('toJSON', {
+    transform: function (_doc, ret) {
+        delete ret.password;
+        delete ret.verifyOtp;
+        delete ret.verifyOtpExpireAt;
+        delete ret.resetOtp;
+        delete ret.resetOtpExpireAt;
+        return ret;
+    }
+});
+
+const userModel = mongoose.models.user || mongoose.model('user', userSchema);
 export default userModel;

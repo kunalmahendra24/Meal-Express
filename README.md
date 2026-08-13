@@ -33,7 +33,6 @@ A full-stack MERN (MongoDB, Express, React, Node.js) web application for orderin
 - **JWT** for authentication
 - **bcrypt** for password hashing
 - **Multer** for file uploads
-- Rate limiting for API protection
 
 ### Frontend
 - **React 18** with Vite

@@ -1,6 +1,7 @@
 import Order from '../models/orderModel.js';
 import Meal from '../models/mealModel.js';
 import Settings from '../models/settingsModel.js';
+import { emitOrderNew, emitOrderStatusUpdated } from '../socket/emit.js';
 
 // Create new order
 export const createOrder = async (req, res) => {
@@ -69,12 +70,15 @@ export const createOrder = async (req, res) => {
             deliveryAddress,
             paymentMethod: paymentMethod || 'cod',
             deliveryInstructions,
-            estimatedDeliveryTime,
-            statusHistory: [{ status: 'pending', timestamp: new Date() }]
+            estimatedDeliveryTime
         });
         
         await order.save();
-        
+        await order.populate('user', 'name email phone');
+
+        const io = req.app.get('io');
+        emitOrderNew(io, order);
+
         res.status(201).json({
             success: true,
             message: 'Order placed successfully',
@@ -162,7 +166,10 @@ export const cancelOrder = async (req, res) => {
         
         order.status = 'cancelled';
         await order.save();
-        
+
+        const io = req.app.get('io');
+        emitOrderStatusUpdated(io, order);
+
         res.json({
             success: true,
             message: 'Order cancelled successfully',
@@ -236,19 +243,24 @@ export const updateOrderStatus = async (req, res) => {
         }
         
         order.status = status;
-        if (note) {
-            order.statusHistory[order.statusHistory.length - 1].note = note;
-        }
-        
+        order.statusHistory.push({
+            status,
+            timestamp: new Date(),
+            ...(note ? { note } : {})
+        });
+
         if (status === 'delivered') {
             order.actualDeliveryTime = new Date();
             if (order.paymentMethod === 'cod') {
                 order.paymentStatus = 'paid';
             }
         }
-        
+
         await order.save();
-        
+
+        const io = req.app.get('io');
+        emitOrderStatusUpdated(io, order);
+
         res.json({
             success: true,
             message: 'Order status updated',

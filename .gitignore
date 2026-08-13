@@ -16,5 +16,8 @@ server/dist
 # Logs
 *.log
 
+# Uploads
+server/uploads
+
 # Other
 .DS_Store

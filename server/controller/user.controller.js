@@ -29,12 +29,15 @@ export const getUserData = async (req, res) => {
 export const updateProfile = async (req, res) => {
     try {
         const { name, phone, avatar } = req.body;
-        
+
         const updateData = {};
         if (name) updateData.name = name;
         if (phone) updateData.phone = phone;
         if (avatar) updateData.avatar = avatar;
-        
+
+        delete updateData.role;
+        delete updateData.isActive;
+
         const user = await userModel.findByIdAndUpdate(
             req.userId,
             { $set: updateData },

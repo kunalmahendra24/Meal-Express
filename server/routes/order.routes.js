@@ -10,12 +10,11 @@ import {
 } from '../controller/order.controller.js';
 import authMiddleware from '../middleware/user.auth.js';
 import adminMiddleware from '../middleware/admin.auth.js';
-import { orderLimiter } from '../middleware/rateLimiter.js';
 
 const router = express.Router();
 
 // User routes
-router.post('/', authMiddleware, orderLimiter, createOrder);
+router.post('/', authMiddleware, createOrder);
 router.get('/my-orders', authMiddleware, getUserOrders);
 router.get('/my-orders/:id', authMiddleware, getOrderById);
 router.patch('/:id/cancel', authMiddleware, cancelOrder);

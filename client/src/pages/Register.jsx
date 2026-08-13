@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { useApp } from '../context/AppContext';
 import { User, Mail, Lock, Eye, EyeOff, UtensilsCrossed } from 'lucide-react';
@@ -18,11 +18,11 @@ const Register = () => {
     const [showPassword, setShowPassword] = useState(false);
     const [error, setError] = useState('');
 
-    // Redirect if already authenticated
-    if (isAuthenticated) {
-        navigate(redirect);
-        return null;
-    }
+    useEffect(() => {
+        if (isAuthenticated) {
+            navigate(redirect);
+        }
+    }, [isAuthenticated, navigate, redirect]);
 
     const handleSubmit = async (e) => {
         e.preventDefault();
@@ -44,10 +44,10 @@ const Register = () => {
         }
 
         const result = await register(formData.name, formData.email, formData.password);
-        if (result.success) {
+        if (result?.success) {
             navigate(redirect);
         } else {
-            setError(result.message);
+            setError(result?.message || 'Registration failed');
         }
     };
 

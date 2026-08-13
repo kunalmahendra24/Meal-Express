@@ -2,11 +2,13 @@ import { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import { useApp } from '../context/AppContext';
+import { useSocket } from '../context/SocketContext';
 import LoadingSpinner from '../components/LoadingSpinner';
 import { Package, ChevronRight, Clock, CheckCircle, Truck, XCircle, AlertCircle } from 'lucide-react';
 
 const Orders = () => {
-    const { API_URL, isAuthenticated } = useApp();
+    const { API_URL, isAuthenticated, authLoading } = useApp();
+    const socket = useSocket();
     const navigate = useNavigate();
     const [orders, setOrders] = useState([]);
     const [loading, setLoading] = useState(true);
@@ -14,12 +16,44 @@ const Orders = () => {
     const [pagination, setPagination] = useState({ page: 1, pages: 1, total: 0 });
 
     useEffect(() => {
+        if (authLoading) return;
         if (!isAuthenticated) {
             navigate('/login?redirect=/orders');
             return;
         }
         fetchOrders();
-    }, [isAuthenticated, filter]);
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [authLoading, isAuthenticated, filter]);
+
+    useEffect(() => {
+        if (!socket) return;
+
+        const onStatusUpdated = (payload) => {
+            setOrders(prev => prev.map(order => {
+                if (order._id !== payload.orderId && order._id?.toString() !== payload.orderId) {
+                    return order;
+                }
+                return {
+                    ...order,
+                    status: payload.status,
+                    statusHistory: payload.statusHistory || order.statusHistory
+                };
+            }));
+        };
+
+        const onReconnect = () => {
+            fetchOrders(pagination.page);
+        };
+
+        socket.on('order:statusUpdated', onStatusUpdated);
+        socket.io.on('reconnect', onReconnect);
+
+        return () => {
+            socket.off('order:statusUpdated', onStatusUpdated);
+            socket.io.off('reconnect', onReconnect);
+        };
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [socket, filter]);
 
     const fetchOrders = async (page = 1) => {
         try {

@@ -1,6 +1,7 @@
 import { useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { useAdmin } from '../../context/AdminContext';
+import { useSocket } from '../../context/SocketContext';
 import LoadingSpinner from '../../components/LoadingSpinner';
 import { 
     Users, 
@@ -15,10 +16,31 @@ import {
 
 const Dashboard = () => {
     const { dashboardStats, fetchDashboardStats, loading } = useAdmin();
+    const socket = useSocket();
 
     useEffect(() => {
         fetchDashboardStats();
     }, [fetchDashboardStats]);
+
+    useEffect(() => {
+        if (!socket) return;
+
+        const onNewOrder = () => {
+            fetchDashboardStats();
+        };
+
+        const onReconnect = () => {
+            fetchDashboardStats();
+        };
+
+        socket.on('order:new', onNewOrder);
+        socket.io.on('reconnect', onReconnect);
+
+        return () => {
+            socket.off('order:new', onNewOrder);
+            socket.io.off('reconnect', onReconnect);
+        };
+    }, [socket, fetchDashboardStats]);
 
     if (loading || !dashboardStats) {
         return (
@@ -28,7 +50,7 @@ const Dashboard = () => {
         );
     }
 
-    const { overview, orders, revenue, orderStatusBreakdown, recentOrders, dailyOrders, topMeals } = dashboardStats;
+    const { overview, orders, revenue, orderStatusBreakdown, recentOrders, topMeals } = dashboardStats;
 
     const statCards = [
         {

@@ -80,13 +80,16 @@ orderSchema.index({ user: 1, createdAt: -1 });
 orderSchema.index({ status: 1 });
 orderSchema.index({ createdAt: -1 });
 
-// Pre-save hook to add status to history
+// Pre-save hook to add status to history without duplicating
 orderSchema.pre('save', function(next) {
     if (this.isModified('status')) {
-        this.statusHistory.push({
-            status: this.status,
-            timestamp: new Date()
-        });
+        const last = this.statusHistory[this.statusHistory.length - 1];
+        if (!last || last.status !== this.status) {
+            this.statusHistory.push({
+                status: this.status,
+                timestamp: new Date()
+            });
+        }
     }
     next();
 });

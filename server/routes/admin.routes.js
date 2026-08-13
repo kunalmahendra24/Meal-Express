@@ -17,7 +17,7 @@ router.get('/dashboard', adminMiddleware, getDashboardStats);
 // User management
 router.get('/users', adminMiddleware, getAllUsers);
 router.get('/users/:id', adminMiddleware, getUserDetails);
-router.patch('/users/:id/role', adminMiddleware, updateUserRole);
+router.patch('/users/:id/role', superAdminMiddleware, updateUserRole);
 router.patch('/users/:id/toggle-status', adminMiddleware, toggleUserStatus);
 router.delete('/users/:id', superAdminMiddleware, deleteUser);
 

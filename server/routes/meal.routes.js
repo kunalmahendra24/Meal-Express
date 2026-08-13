@@ -9,7 +9,6 @@ import {
     getFeaturedMeals,
     getMealsByCategory
 } from '../controller/meal.controller.js';
-import authMiddleware from '../middleware/user.auth.js';
 import adminMiddleware from '../middleware/admin.auth.js';
 import upload from '../middleware/upload.js';
 

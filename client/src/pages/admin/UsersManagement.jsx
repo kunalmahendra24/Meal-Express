@@ -1,10 +1,13 @@
 import { useState, useEffect } from 'react';
 import { useAdmin } from '../../context/AdminContext';
+import { useApp } from '../../context/AppContext';
 import LoadingSpinner from '../../components/LoadingSpinner';
-import { Search, Users, Shield, ShieldOff, Eye, UserCheck, UserX } from 'lucide-react';
+import { Search, Users, Shield, Eye, UserCheck, UserX } from 'lucide-react';
 
 const UsersManagement = () => {
     const { users, fetchUsers, updateUserRole, toggleUserStatus, pagination, loading } = useAdmin();
+    const { user: currentUser } = useApp();
+    const canChangeRoles = currentUser?.role === 'super_admin';
     
     const [search, setSearch] = useState('');
     const [roleFilter, setRoleFilter] = useState('all');
@@ -135,9 +138,12 @@ const UsersManagement = () => {
                                             <p className="text-sm text-gray-500">{user.phone || 'No phone'}</p>
                                         </td>
                                         <td className="px-4 py-4">
-                                            {user.role === 'super_admin' ? (
-                                                <span className={`px-3 py-1 rounded-full text-xs font-medium ${getRoleBadgeColor(user.role)}`}>
-                                                    Super Admin
+                                            {user.role === 'super_admin' || !canChangeRoles ? (
+                                                <span
+                                                    className={`px-3 py-1 rounded-full text-xs font-medium ${getRoleBadgeColor(user.role)}`}
+                                                    title={!canChangeRoles ? 'Super admin only' : undefined}
+                                                >
+                                                    {user.role === 'super_admin' ? 'Super Admin' : user.role === 'admin' ? 'Admin' : 'User'}
                                                 </span>
                                             ) : (
                                                 <select

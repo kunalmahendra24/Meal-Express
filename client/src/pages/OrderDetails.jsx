@@ -3,24 +3,22 @@ import { useParams, Link, useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import { toast } from 'react-toastify';
 import { useApp } from '../context/AppContext';
+import { useSocket } from '../context/SocketContext';
 import LoadingSpinner from '../components/LoadingSpinner';
 import { ArrowLeft, Package, MapPin, CreditCard, Clock, CheckCircle, Truck, XCircle, AlertCircle } from 'lucide-react';
 
+const formatStatus = (status = '') => {
+    return status.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
+};
+
 const OrderDetails = () => {
     const { id } = useParams();
-    const { API_URL, isAuthenticated } = useApp();
+    const { API_URL, isAuthenticated, authLoading } = useApp();
+    const socket = useSocket();
     const navigate = useNavigate();
     const [order, setOrder] = useState(null);
     const [loading, setLoading] = useState(true);
     const [cancelling, setCancelling] = useState(false);
-
-    useEffect(() => {
-        if (!isAuthenticated) {
-            navigate('/login?redirect=/orders');
-            return;
-        }
-        fetchOrderDetails();
-    }, [id, isAuthenticated]);
 
     const fetchOrderDetails = async () => {
         try {
@@ -35,6 +33,45 @@ const OrderDetails = () => {
             setLoading(false);
         }
     };
+
+    useEffect(() => {
+        if (authLoading) return;
+        if (!isAuthenticated) {
+            navigate('/login?redirect=/orders');
+            return;
+        }
+        fetchOrderDetails();
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [id, authLoading, isAuthenticated]);
+
+    useEffect(() => {
+        if (!socket) return;
+
+        const onStatusUpdated = (payload) => {
+            if (payload.orderId !== id) return;
+            setOrder(prev => prev ? {
+                ...prev,
+                status: payload.status,
+                statusHistory: payload.statusHistory || prev.statusHistory,
+                estimatedDeliveryTime: payload.estimatedDeliveryTime ?? prev.estimatedDeliveryTime,
+                actualDeliveryTime: payload.actualDeliveryTime ?? prev.actualDeliveryTime
+            } : prev);
+            toast.info(`Your order is now ${formatStatus(payload.status)}`);
+        };
+
+        const onReconnect = () => {
+            fetchOrderDetails();
+        };
+
+        socket.on('order:statusUpdated', onStatusUpdated);
+        socket.io.on('reconnect', onReconnect);
+
+        return () => {
+            socket.off('order:statusUpdated', onStatusUpdated);
+            socket.io.off('reconnect', onReconnect);
+        };
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [socket, id]);
 
     const handleCancelOrder = async () => {
         if (!window.confirm('Are you sure you want to cancel this order?')) return;
@@ -69,10 +106,6 @@ const OrderDetails = () => {
             default:
                 return <Package className="w-6 h-6 text-gray-500" />;
         }
-    };
-
-    const formatStatus = (status) => {
-        return status.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
     };
 
     const formatDate = (date) => {

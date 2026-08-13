@@ -54,7 +54,7 @@ export const AppProvider = ({ children }) => {
                 setUser(response.data.user);
                 setIsAuthenticated(true);
             }
-        } catch (error) {
+        } catch {
             setUser(null);
             setIsAuthenticated(false);
         } finally {
@@ -72,6 +72,9 @@ export const AppProvider = ({ children }) => {
                 toast.success('Login successful!');
                 return { success: true };
             }
+            const message = response.data.message || 'Login failed';
+            toast.error(message);
+            return { success: false, message };
         } catch (error) {
             const message = error.response?.data?.message || 'Login failed';
             toast.error(message);
@@ -91,6 +94,9 @@ export const AppProvider = ({ children }) => {
                 toast.success('Registration successful!');
                 return { success: true };
             }
+            const message = response.data.message || 'Registration failed';
+            toast.error(message);
+            return { success: false, message };
         } catch (error) {
             const message = error.response?.data?.message || 'Registration failed';
             toast.error(message);

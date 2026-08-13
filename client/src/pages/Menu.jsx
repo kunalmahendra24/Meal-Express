@@ -12,7 +12,6 @@ const Menu = () => {
     const [search, setSearch] = useState('');
     const [category, setCategory] = useState('all');
     const [sort, setSort] = useState('');
-    const [showFilters, setShowFilters] = useState(false);
     const [viewMode, setViewMode] = useState('vendor'); // 'vendor' or 'all'
     const [pagination, setPagination] = useState({ page: 1, pages: 1, total: 0 });
 

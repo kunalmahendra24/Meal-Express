@@ -14,8 +14,8 @@ const Checkout = () => {
         clearCart,
         API_URL,
         isAuthenticated,
-        user,
-        settings
+        settings,
+        authLoading
     } = useApp();
     const navigate = useNavigate();
 
@@ -44,6 +44,7 @@ const Checkout = () => {
     const finalTotal = cartTotal + deliveryCharge;
 
     useEffect(() => {
+        if (authLoading) return;
         if (!isAuthenticated) {
             navigate('/login?redirect=/checkout');
             return;
@@ -53,7 +54,8 @@ const Checkout = () => {
             return;
         }
         fetchAddresses();
-    }, [isAuthenticated, cart]);
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [authLoading, isAuthenticated, cart.length]);
 
     const fetchAddresses = async () => {
         try {

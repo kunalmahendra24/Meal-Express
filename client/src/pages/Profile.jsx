@@ -7,7 +7,7 @@ import LoadingSpinner from '../components/LoadingSpinner';
 import { User, Mail, Phone, MapPin, Plus, Edit2, Trash2, Check, X, Shield } from 'lucide-react';
 
 const Profile = () => {
-    const { API_URL, isAuthenticated, user, checkAuth } = useApp();
+    const { API_URL, isAuthenticated, checkAuth, authLoading } = useApp();
     const navigate = useNavigate();
 
     const [profile, setProfile] = useState(null);
@@ -31,12 +31,14 @@ const Profile = () => {
     });
 
     useEffect(() => {
+        if (authLoading) return;
         if (!isAuthenticated) {
             navigate('/login?redirect=/profile');
             return;
         }
         fetchProfile();
-    }, [isAuthenticated]);
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [authLoading, isAuthenticated]);
 
     const fetchProfile = async () => {
         try {

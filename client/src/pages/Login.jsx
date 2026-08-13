@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { useApp } from '../context/AppContext';
 import { Mail, Lock, Eye, EyeOff, UtensilsCrossed } from 'lucide-react';
@@ -16,11 +16,11 @@ const Login = () => {
     const [showPassword, setShowPassword] = useState(false);
     const [error, setError] = useState('');
 
-    // Redirect if already authenticated
-    if (isAuthenticated) {
-        navigate(redirect);
-        return null;
-    }
+    useEffect(() => {
+        if (isAuthenticated) {
+            navigate(redirect);
+        }
+    }, [isAuthenticated, navigate, redirect]);
 
     const handleSubmit = async (e) => {
         e.preventDefault();
@@ -32,10 +32,10 @@ const Login = () => {
         }
 
         const result = await login(formData.email, formData.password);
-        if (result.success) {
+        if (result?.success) {
             navigate(redirect);
         } else {
-            setError(result.message);
+            setError(result?.message || 'Login failed');
         }
     };
 
