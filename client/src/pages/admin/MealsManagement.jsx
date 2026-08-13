@@ -299,8 +299,12 @@ const MealsManagement = () => {
             {/* Add/Edit Modal */}
             {showModal && (
                 <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
-                    <div className="bg-white rounded-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
-                        <div className="flex items-center justify-between p-4 border-b sticky top-0 bg-white">
+                    <div
+                        data-lenis-prevent
+                        className="bg-white rounded-xl max-w-2xl w-full max-h-[90vh] flex flex-col overflow-hidden"
+                        onWheel={(e) => e.stopPropagation()}
+                    >
+                        <div className="flex items-center justify-between p-4 border-b shrink-0">
                             <h2 className="text-lg font-semibold">
                                 {editingMeal ? 'Edit Meal' : 'Add New Meal'}
                             </h2>
@@ -309,7 +313,8 @@ const MealsManagement = () => {
                             </button>
                         </div>
 
-                        <form onSubmit={handleSubmit} className="p-4 space-y-4">
+                        <form onSubmit={handleSubmit} className="flex flex-col flex-1 min-h-0">
+                        <div className="p-4 space-y-4 overflow-y-auto flex-1 min-h-0 overscroll-contain">
                             <div className="grid sm:grid-cols-2 gap-4">
                                 <div>
                                     <label className="block text-sm font-medium text-gray-700 mb-1">Name *</label>
@@ -461,7 +466,8 @@ const MealsManagement = () => {
                                 <label htmlFor="isAvailable" className="text-sm text-gray-700">Available for ordering</label>
                             </div>
 
-                            <div className="flex space-x-4 pt-4 border-t">
+                            </div>
+                            <div className="flex space-x-4 p-4 border-t shrink-0 bg-white">
                                 <button
                                     type="submit"
                                     disabled={loading}

@@ -51,9 +51,17 @@ const ScrollToTop = () => {
     return null;
 };
 
-// Lenis smooth scroll wrapper
+// Lenis smooth scroll wrapper (disabled on admin so modals can scroll)
 const LenisWrapper = ({ children }) => {
+    const location = useLocation();
+    const isAdmin = location.pathname.startsWith('/admin');
+
     useEffect(() => {
+        if (isAdmin) {
+            document.documentElement.classList.remove('lenis', 'lenis-smooth', 'lenis-stopped');
+            return undefined;
+        }
+
         const lenis = new Lenis({
             duration: 1.2,
             easing: (t) => Math.min(1, 1.001 - Math.pow(2, -10 * t)),
@@ -70,15 +78,13 @@ const LenisWrapper = ({ children }) => {
         }
 
         requestAnimationFrame(raf);
-
-        // Make lenis available globally for scroll-to functionality
         window.lenis = lenis;
 
         return () => {
             lenis.destroy();
             window.lenis = null;
         };
-    }, []);
+    }, [isAdmin]);
 
     return children;
 };
