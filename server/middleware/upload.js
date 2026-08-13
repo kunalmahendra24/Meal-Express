@@ -17,16 +17,8 @@ if (!fs.existsSync(mealsDir)) {
     fs.mkdirSync(mealsDir, { recursive: true });
 }
 
-// Configure storage
-const storage = multer.diskStorage({
-    destination: function (req, file, cb) {
-        cb(null, mealsDir);
-    },
-    filename: function (req, file, cb) {
-        const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
-        cb(null, 'meal-' + uniqueSuffix + path.extname(file.originalname));
-    }
-});
+// Memory storage so images survive Render restarts (ephemeral disk wipes /uploads)
+const storage = multer.memoryStorage();
 
 // File filter
 const fileFilter = (req, file, cb) => {

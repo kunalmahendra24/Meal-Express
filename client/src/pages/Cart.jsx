@@ -1,5 +1,6 @@
 import { Link, useNavigate } from 'react-router-dom';
 import { useApp } from '../context/AppContext';
+import { resolveImageUrl } from '../utils/imageUrl';
 import { Minus, Plus, Trash2, ShoppingBag, ArrowRight, ArrowLeft } from 'lucide-react';
 
 const Cart = () => {
@@ -66,9 +67,7 @@ const Cart = () => {
                     {/* Cart Items */}
                     <div className="lg:col-span-2 space-y-4">
                         {cart.map(item => {
-                            const imageUrl = item.images?.[0]
-                                ? (item.images[0].startsWith('http') ? item.images[0] : `${API_URL}${item.images[0]}`)
-                                : 'https://images.unsplash.com/photo-1546069901-ba9599a7e63c?w=200';
+                            const imageUrl = resolveImageUrl(item.images?.[0], API_URL);
 
                             return (
                                 <div

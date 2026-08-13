@@ -3,6 +3,7 @@ import { Link, useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import { useApp } from '../context/AppContext';
 import { useSocket } from '../context/SocketContext';
+import { resolveImageUrl } from '../utils/imageUrl';
 import LoadingSpinner from '../components/LoadingSpinner';
 import { Package, ChevronRight, Clock, CheckCircle, Truck, XCircle, AlertCircle } from 'lucide-react';
 
@@ -206,7 +207,7 @@ const Orders = () => {
                                                     >
                                                         {item.image ? (
                                                             <img
-                                                                src={item.image.startsWith('http') ? item.image : `${API_URL}${item.image}`}
+                                                                src={resolveImageUrl(item.image, API_URL)}
                                                                 alt={item.name}
                                                                 className="w-full h-full object-cover"
                                                             />

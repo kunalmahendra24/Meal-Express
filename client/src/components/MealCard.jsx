@@ -1,5 +1,6 @@
 import { Link } from 'react-router-dom';
 import { useApp } from '../context/AppContext';
+import { resolveImageUrl } from '../utils/imageUrl';
 import { ShoppingCart, Star, Leaf, Drumstick, Plus } from 'lucide-react';
 
 const MealCard = ({ meal, compact = false }) => {
@@ -32,9 +33,7 @@ const MealCard = ({ meal, compact = false }) => {
         }
     };
 
-    const imageUrl = meal.images?.[0] 
-        ? (meal.images[0].startsWith('http') ? meal.images[0] : `${API_URL}${meal.images[0]}`)
-        : 'https://images.unsplash.com/photo-1546069901-ba9599a7e63c?w=400';
+    const imageUrl = resolveImageUrl(meal.images?.[0], API_URL);
 
     // Compact view for vendor cards
     if (compact) {
@@ -46,6 +45,7 @@ const MealCard = ({ meal, compact = false }) => {
                             src={imageUrl}
                             alt={meal.name}
                             className="w-full h-full object-cover"
+                            onError={(e) => { e.currentTarget.src = 'https://images.unsplash.com/photo-1546069901-ba9599a7e63c?w=400'; }}
                         />
                         {!meal.isAvailable && (
                             <div className="absolute inset-0 bg-black/50 flex items-center justify-center">
@@ -105,6 +105,7 @@ const MealCard = ({ meal, compact = false }) => {
                         src={imageUrl}
                         alt={meal.name}
                         className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                        onError={(e) => { e.currentTarget.src = 'https://images.unsplash.com/photo-1546069901-ba9599a7e63c?w=400'; }}
                     />
                     {!meal.isAvailable && (
                         <div className="absolute inset-0 bg-black/50 flex items-center justify-center">

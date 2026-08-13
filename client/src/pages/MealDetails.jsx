@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import axios from 'axios';
 import { useApp } from '../context/AppContext';
+import { resolveImageUrl } from '../utils/imageUrl';
 import LoadingSpinner from '../components/LoadingSpinner';
 import { ArrowLeft, Minus, Plus, ShoppingCart, Star, Clock, Users, Leaf, Drumstick, Calendar } from 'lucide-react';
 
@@ -68,9 +69,7 @@ const MealDetails = () => {
         );
     }
 
-    const imageUrl = meal.images?.[selectedImage]
-        ? (meal.images[selectedImage].startsWith('http') ? meal.images[selectedImage] : `${API_URL}${meal.images[selectedImage]}`)
-        : 'https://images.unsplash.com/photo-1546069901-ba9599a7e63c?w=600';
+    const imageUrl = resolveImageUrl(meal.images?.[selectedImage], API_URL);
 
     return (
         <div className="min-h-screen bg-gray-50">
@@ -115,7 +114,7 @@ const MealDetails = () => {
                                             }`}
                                         >
                                             <img
-                                                src={img.startsWith('http') ? img : `${API_URL}${img}`}
+                                                src={resolveImageUrl(img, API_URL)}
                                                 alt={`${meal.name} ${index + 1}`}
                                                 className="w-full h-full object-cover"
                                             />

@@ -4,6 +4,7 @@ import axios from 'axios';
 import { toast } from 'react-toastify';
 import { useApp } from '../context/AppContext';
 import { useSocket } from '../context/SocketContext';
+import { resolveImageUrl } from '../utils/imageUrl';
 import LoadingSpinner from '../components/LoadingSpinner';
 import { ArrowLeft, Package, MapPin, CreditCard, Clock, CheckCircle, Truck, XCircle, AlertCircle } from 'lucide-react';
 
@@ -240,7 +241,7 @@ const OrderDetails = () => {
                                 <div className="w-16 h-16 rounded-lg overflow-hidden bg-gray-100 flex-shrink-0">
                                     {item.image ? (
                                         <img
-                                            src={item.image.startsWith('http') ? item.image : `${API_URL}${item.image}`}
+                                            src={resolveImageUrl(item.image, API_URL)}
                                             alt={item.name}
                                             className="w-full h-full object-cover"
                                         />

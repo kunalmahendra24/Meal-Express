@@ -3,6 +3,7 @@ import { toast } from 'react-toastify';
 import { useAdmin } from '../../context/AdminContext';
 import { useApp } from '../../context/AppContext';
 import { useSocket } from '../../context/SocketContext';
+import { resolveImageUrl } from '../../utils/imageUrl';
 import LoadingSpinner from '../../components/LoadingSpinner';
 import { Search, Filter, Eye, Package, Clock, CheckCircle, Truck, XCircle, AlertCircle } from 'lucide-react';
 
@@ -307,7 +308,7 @@ const OrdersManagement = () => {
                                             <div className="flex items-center space-x-3">
                                                 {item.image && (
                                                     <img
-                                                        src={item.image.startsWith('http') ? item.image : `${API_URL}${item.image}`}
+                                                        src={resolveImageUrl(item.image, API_URL)}
                                                         alt={item.name}
                                                         className="w-12 h-12 rounded-lg object-cover"
                                                     />

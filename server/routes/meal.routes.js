@@ -41,7 +41,7 @@ router.post('/upload-image', adminMiddleware, (req, res) => {
             return res.status(400).json({ success: false, message: 'No image uploaded' });
         }
         
-        const imageUrl = `/uploads/meals/${req.file.filename}`;
+        const imageUrl = `data:${req.file.mimetype};base64,${req.file.buffer.toString('base64')}`;
         res.json({
             success: true,
             message: 'Image uploaded successfully',
@@ -57,7 +57,7 @@ router.post('/upload-images', adminMiddleware, upload.array('images', 5), (req, 
             return res.status(400).json({ success: false, message: 'No images uploaded' });
         }
         
-        const imageUrls = req.files.map(file => `/uploads/meals/${file.filename}`);
+        const imageUrls = req.files.map(file => `data:${file.mimetype};base64,${file.buffer.toString('base64')}`);
         res.json({
             success: true,
             message: 'Images uploaded successfully',

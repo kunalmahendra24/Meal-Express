@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useAdmin } from '../../context/AdminContext';
 import { useApp } from '../../context/AppContext';
+import { resolveImageUrl } from '../../utils/imageUrl';
 import LoadingSpinner from '../../components/LoadingSpinner';
 import { Plus, Edit2, Trash2, Eye, EyeOff, Search, Upload, X, Leaf, Drumstick, User, Clock } from 'lucide-react';
 
@@ -228,9 +229,10 @@ const MealsManagement = () => {
                         <div key={meal._id} className="bg-white rounded-xl shadow-sm overflow-hidden">
                             <div className="relative h-40">
                                 <img
-                                    src={meal.images?.[0] ? (meal.images[0].startsWith('http') ? meal.images[0] : `${API_URL}${meal.images[0]}`) : 'https://images.unsplash.com/photo-1546069901-ba9599a7e63c?w=400'}
+                                    src={resolveImageUrl(meal.images?.[0], API_URL)}
                                     alt={meal.name}
                                     className="w-full h-full object-cover"
+                                    onError={(e) => { e.currentTarget.src = 'https://images.unsplash.com/photo-1546069901-ba9599a7e63c?w=400'; }}
                                 />
                                 {!meal.isAvailable && (
                                     <div className="absolute inset-0 bg-black/50 flex items-center justify-center">
@@ -439,7 +441,7 @@ const MealsManagement = () => {
                                     {formData.images.map((img, index) => (
                                         <div key={index} className="relative w-20 h-20 rounded-lg overflow-hidden">
                                             <img
-                                                src={img.startsWith('http') ? img : `${API_URL}${img}`}
+                                                src={resolveImageUrl(img, API_URL)}
                                                 alt={`Preview ${index + 1}`}
                                                 className="w-full h-full object-cover"
                                             />
