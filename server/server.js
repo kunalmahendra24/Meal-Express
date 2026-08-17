@@ -14,6 +14,7 @@ import { initSocket } from './socket/index.js';
 import authRouter from './routes/auth.routes.js';
 import userRouter from './routes/userRoutes.js';
 import mealRouter from './routes/meal.routes.js';
+import kitchenRouter from './routes/kitchen.routes.js';
 import orderRouter from './routes/order.routes.js';
 import subscriptionRouter from './routes/subscription.routes.js';
 import settingsRouter from './routes/settings.routes.js';
@@ -83,6 +84,7 @@ app.get('/', (req, res) => {
 app.use('/api/auth', authRouter);
 app.use('/api/user', userRouter);
 app.use('/api/meals', mealRouter);
+app.use('/api/kitchens', kitchenRouter);
 app.use('/api/orders', orderRouter);
 app.use('/api/subscriptions', subscriptionRouter);
 app.use('/api/settings', settingsRouter);

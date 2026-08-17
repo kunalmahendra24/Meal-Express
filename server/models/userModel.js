@@ -71,6 +71,12 @@ const userSchema = new mongoose.Schema({
         enum: ['user', 'admin', 'super_admin'],
         default: 'user'
     },
+    // Kitchen an `admin` staffs. `super_admin` stays null so it can act across kitchens.
+    kitchen: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'Kitchen',
+        default: null
+    },
     addresses: [addressSchema],
     favorites: [{
         type: mongoose.Schema.Types.ObjectId,

@@ -26,7 +26,7 @@ const adminMiddleware = async (req, res, next) => {
         }
 
         // Get user and check role
-        const user = await userModel.findById(decoded.id).select('role isActive');
+        const user = await userModel.findById(decoded.id).select('role isActive kitchen');
         
         if (!user) {
             return res.status(404).json({ 
@@ -51,6 +51,8 @@ const adminMiddleware = async (req, res, next) => {
 
         req.userId = decoded.id;
         req.userRole = user.role;
+        // super_admin is cross-kitchen, so a missing kitchen is not an error here
+        req.kitchenId = user.kitchen ? user.kitchen.toString() : null;
         next();
 
     } catch (error) {
@@ -75,7 +77,7 @@ const superAdminMiddleware = async (req, res, next) => {
 
     try {
         const decoded = jwt.verify(token, process.env.JWT_SECRET);
-        const user = await userModel.findById(decoded.id).select('role isActive');
+        const user = await userModel.findById(decoded.id).select('role isActive kitchen');
         
         if (!user || user.role !== 'super_admin') {
             return res.status(403).json({ 
@@ -93,6 +95,7 @@ const superAdminMiddleware = async (req, res, next) => {
 
         req.userId = decoded.id;
         req.userRole = user.role;
+        req.kitchenId = user.kitchen ? user.kitchen.toString() : null;
         next();
 
     } catch (error) {

@@ -4,26 +4,52 @@ import { useAdmin } from '../../context/AdminContext';
 import { useApp } from '../../context/AppContext';
 import { useSocket } from '../../context/SocketContext';
 import { resolveImageUrl } from '../../utils/imageUrl';
+import { getKitchenId } from '../../utils/kitchen';
 import LoadingSpinner from '../../components/LoadingSpinner';
-import { Search, Filter, Eye, Package, Clock, CheckCircle, Truck, XCircle, AlertCircle } from 'lucide-react';
+import { Search, Filter, Eye, Package, Clock, CheckCircle, Truck, XCircle, AlertCircle, ChefHat } from 'lucide-react';
 
 const OrdersManagement = () => {
-    const { orders, fetchOrders, updateOrderStatus, pagination, loading, prependLiveOrder, applyLiveOrderStatus } = useAdmin();
-    const { API_URL } = useApp();
+    const { orders, fetchOrders, updateOrderStatus, pagination, loading, prependLiveOrder, applyLiveOrderStatus, kitchens, fetchKitchens } = useAdmin();
+    const { API_URL, user } = useApp();
     const socket = useSocket();
     
     const [statusFilter, setStatusFilter] = useState('all');
+    const [kitchenFilter, setKitchenFilter] = useState('all');
     const [selectedOrder, setSelectedOrder] = useState(null);
     const [showModal, setShowModal] = useState(false);
 
+    // Only a super_admin sees orders across kitchens, so only they get the column/filter
+    const isSuperAdmin = user?.role === 'super_admin';
+
+    const queryParams = {
+        status: statusFilter !== 'all' ? statusFilter : undefined,
+        kitchen: isSuperAdmin && kitchenFilter !== 'all' ? kitchenFilter : undefined
+    };
+
+    const kitchenNameFor = (order) => {
+        if (order.kitchen && typeof order.kitchen === 'object') return order.kitchen.name;
+        const id = getKitchenId(order);
+        return kitchens.find(k => k._id === id)?.name || '—';
+    };
+
     useEffect(() => {
-        fetchOrders({ status: statusFilter !== 'all' ? statusFilter : undefined });
-    }, [fetchOrders, statusFilter]);
+        if (isSuperAdmin) fetchKitchens();
+    }, [isSuperAdmin, fetchKitchens]);
+
+    useEffect(() => {
+        fetchOrders({
+            status: statusFilter !== 'all' ? statusFilter : undefined,
+            kitchen: isSuperAdmin && kitchenFilter !== 'all' ? kitchenFilter : undefined
+        });
+    }, [fetchOrders, statusFilter, kitchenFilter, isSuperAdmin]);
 
     useEffect(() => {
         if (!socket) return;
 
         const onNewOrder = (payload) => {
+            const matchesKitchen = !isSuperAdmin || kitchenFilter === 'all' || payload.kitchen === kitchenFilter;
+            if (!matchesKitchen) return;
+
             if (statusFilter === 'all' || payload.status === statusFilter) {
                 prependLiveOrder(payload);
             }
@@ -47,7 +73,10 @@ const OrdersManagement = () => {
         };
 
         const onReconnect = () => {
-            fetchOrders({ status: statusFilter !== 'all' ? statusFilter : undefined });
+            fetchOrders({
+                status: statusFilter !== 'all' ? statusFilter : undefined,
+                kitchen: isSuperAdmin && kitchenFilter !== 'all' ? kitchenFilter : undefined
+            });
         };
 
         socket.on('order:new', onNewOrder);
@@ -59,7 +88,7 @@ const OrdersManagement = () => {
             socket.off('order:statusUpdated', onStatusUpdated);
             socket.io.off('reconnect', onReconnect);
         };
-    }, [socket, statusFilter, prependLiveOrder, applyLiveOrderStatus, fetchOrders]);
+    }, [socket, statusFilter, kitchenFilter, isSuperAdmin, prependLiveOrder, applyLiveOrderStatus, fetchOrders]);
 
     const getStatusIcon = (status) => {
         switch (status) {
@@ -126,12 +155,14 @@ const OrdersManagement = () => {
             <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
                 <div>
                     <h1 className="text-2xl font-bold text-gray-900">Orders Management</h1>
-                    <p className="text-gray-500 text-sm mt-1">Manage and track all orders</p>
+                    <p className="text-gray-500 text-sm mt-1">
+                        {isSuperAdmin ? 'Manage orders across all kitchens' : 'Manage and track your kitchen\'s orders'}
+                    </p>
                 </div>
             </div>
 
             {/* Filters */}
-            <div className="bg-white rounded-xl shadow-sm p-4">
+            <div className="bg-white rounded-xl shadow-sm p-4 space-y-4">
                 <div className="flex flex-wrap gap-2">
                     {filterOptions.map(status => (
                         <button
@@ -147,6 +178,22 @@ const OrdersManagement = () => {
                         </button>
                     ))}
                 </div>
+
+                {isSuperAdmin && kitchens.length > 0 && (
+                    <div className="flex items-center gap-3 pt-2 border-t">
+                        <ChefHat className="w-4 h-4 text-gray-400" />
+                        <select
+                            value={kitchenFilter}
+                            onChange={(e) => setKitchenFilter(e.target.value)}
+                            className="px-3 py-2 border rounded-lg text-sm focus:ring-2 focus:ring-orange-300"
+                        >
+                            <option value="all">All Kitchens</option>
+                            {kitchens.map(kitchen => (
+                                <option key={kitchen._id} value={kitchen._id}>{kitchen.name}</option>
+                            ))}
+                        </select>
+                    </div>
+                )}
             </div>
 
             {/* Orders Table */}
@@ -167,6 +214,9 @@ const OrdersManagement = () => {
                                 <tr>
                                     <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Order ID</th>
                                     <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Customer</th>
+                                    {isSuperAdmin && (
+                                        <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Kitchen</th>
+                                    )}
                                     <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Items</th>
                                     <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Amount</th>
                                     <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Status</th>
@@ -188,6 +238,11 @@ const OrdersManagement = () => {
                                                 <p className="text-sm text-gray-500">{order.user?.email}</p>
                                             </div>
                                         </td>
+                                        {isSuperAdmin && (
+                                            <td className="px-4 py-4">
+                                                <span className="text-gray-600">{kitchenNameFor(order)}</span>
+                                            </td>
+                                        )}
                                         <td className="px-4 py-4">
                                             <span className="text-gray-600">{order.items?.length || 0} items</span>
                                         </td>
@@ -232,14 +287,14 @@ const OrdersManagement = () => {
                             </p>
                             <div className="flex space-x-2">
                                 <button
-                                    onClick={() => fetchOrders({ page: pagination.page - 1, status: statusFilter !== 'all' ? statusFilter : undefined })}
+                                    onClick={() => fetchOrders({ ...queryParams, page: pagination.page - 1 })}
                                     disabled={pagination.page === 1}
                                     className="px-3 py-1 border rounded disabled:opacity-50"
                                 >
                                     Previous
                                 </button>
                                 <button
-                                    onClick={() => fetchOrders({ page: pagination.page + 1, status: statusFilter !== 'all' ? statusFilter : undefined })}
+                                    onClick={() => fetchOrders({ ...queryParams, page: pagination.page + 1 })}
                                     disabled={pagination.page === pagination.pages}
                                     className="px-3 py-1 border rounded disabled:opacity-50"
                                 >
@@ -279,6 +334,13 @@ const OrdersManagement = () => {
                                     ))}
                                 </select>
                             </div>
+
+                            {isSuperAdmin && (
+                                <div className="bg-gray-50 rounded-lg p-4">
+                                    <h3 className="font-medium text-gray-900 mb-2">Kitchen</h3>
+                                    <p className="text-gray-600">{kitchenNameFor(selectedOrder)}</p>
+                                </div>
+                            )}
 
                             {/* Customer Info */}
                             <div className="bg-gray-50 rounded-lg p-4">

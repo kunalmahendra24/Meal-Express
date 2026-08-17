@@ -18,6 +18,12 @@ const orderSchema = new mongoose.Schema({
         ref: 'user',
         required: true
     },
+    // An order is always fulfilled by exactly one kitchen (enforced in createOrder)
+    kitchen: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'Kitchen',
+        required: [true, 'Kitchen is required']
+    },
     items: [orderItemSchema],
     totalAmount: {
         type: Number,
@@ -77,6 +83,7 @@ const orderSchema = new mongoose.Schema({
 
 // Index for queries
 orderSchema.index({ user: 1, createdAt: -1 });
+orderSchema.index({ kitchen: 1, createdAt: -1 });
 orderSchema.index({ status: 1 });
 orderSchema.index({ createdAt: -1 });
 

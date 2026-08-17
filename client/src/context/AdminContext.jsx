@@ -1,4 +1,4 @@
-import { createContext, useContext, useState, useCallback } from 'react';
+import { createContext, useContext, useState, useCallback, useRef } from 'react';
 import axios from 'axios';
 import { toast } from 'react-toastify';
 import { useApp } from './AppContext';
@@ -17,6 +17,7 @@ export const AdminProvider = ({ children }) => {
     const [users, setUsers] = useState([]);
     const [subscriptions, setSubscriptions] = useState([]);
     const [settings, setSettings] = useState([]);
+    const [kitchens, setKitchens] = useState([]);
     
     // Pagination
     const [pagination, setPagination] = useState({
@@ -27,6 +28,11 @@ export const AdminProvider = ({ children }) => {
     
     // Loading states
     const [loading, setLoading] = useState(false);
+    
+    // Remember the active filters so post-mutation refreshes stay scoped
+    // (a kitchen admin must not fall back to an unfiltered list)
+    const lastMealParams = useRef({});
+    const lastOrderParams = useRef({});
 
     // Fetch dashboard statistics
     const fetchDashboardStats = useCallback(async () => {
@@ -52,10 +58,68 @@ export const AdminProvider = ({ children }) => {
         }
     }, [API_URL]);
 
+    // Kitchen management
+    const fetchKitchens = useCallback(async () => {
+        try {
+            const response = await axios.get(`${API_URL}/api/kitchens/admin/all`);
+            if (response.data.success) {
+                setKitchens(response.data.data);
+            }
+        } catch (error) {
+            toast.error('Failed to fetch kitchens');
+        }
+    }, [API_URL]);
+
+    const createKitchen = async (kitchenData) => {
+        try {
+            const response = await axios.post(`${API_URL}/api/kitchens`, kitchenData);
+            if (response.data.success) {
+                toast.success('Kitchen created successfully');
+                fetchKitchens();
+                return { success: true, data: response.data.data };
+            }
+            return { success: false };
+        } catch (error) {
+            toast.error(error.response?.data?.message || 'Failed to create kitchen');
+            return { success: false };
+        }
+    };
+
+    const updateKitchen = async (id, kitchenData) => {
+        try {
+            const response = await axios.put(`${API_URL}/api/kitchens/${id}`, kitchenData);
+            if (response.data.success) {
+                toast.success('Kitchen updated successfully');
+                fetchKitchens();
+                return { success: true };
+            }
+            return { success: false };
+        } catch (error) {
+            toast.error(error.response?.data?.message || 'Failed to update kitchen');
+            return { success: false };
+        }
+    };
+
+    const setKitchenStaff = async (kitchenId, userId, action = 'add') => {
+        try {
+            const response = await axios.patch(`${API_URL}/api/kitchens/${kitchenId}/staff`, { userId, action });
+            if (response.data.success) {
+                toast.success(response.data.message);
+                fetchKitchens();
+                return { success: true };
+            }
+            return { success: false };
+        } catch (error) {
+            toast.error(error.response?.data?.message || 'Failed to update kitchen staff');
+            return { success: false };
+        }
+    };
+
     // Meal management
     const fetchMeals = useCallback(async (params = {}) => {
         try {
             setLoading(true);
+            lastMealParams.current = params;
             const response = await axios.get(`${API_URL}/api/meals`, { params: { ...params, available: 'all' } });
             if (response.data.success) {
                 setMeals(response.data.data);
@@ -68,13 +132,15 @@ export const AdminProvider = ({ children }) => {
         }
     }, [API_URL]);
 
+    const refreshMeals = useCallback(() => fetchMeals(lastMealParams.current), [fetchMeals]);
+
     const createMeal = async (mealData) => {
         try {
             setLoading(true);
             const response = await axios.post(`${API_URL}/api/meals`, mealData);
             if (response.data.success) {
                 toast.success('Meal created successfully');
-                fetchMeals();
+                refreshMeals();
                 return { success: true, data: response.data.data };
             }
         } catch (error) {
@@ -91,7 +157,7 @@ export const AdminProvider = ({ children }) => {
             const response = await axios.put(`${API_URL}/api/meals/${id}`, mealData);
             if (response.data.success) {
                 toast.success('Meal updated successfully');
-                fetchMeals();
+                refreshMeals();
                 return { success: true };
             }
         } catch (error) {
@@ -107,7 +173,7 @@ export const AdminProvider = ({ children }) => {
             const response = await axios.delete(`${API_URL}/api/meals/${id}`);
             if (response.data.success) {
                 toast.success('Meal deleted successfully');
-                fetchMeals();
+                refreshMeals();
                 return { success: true };
             }
         } catch (error) {
@@ -121,7 +187,7 @@ export const AdminProvider = ({ children }) => {
             const response = await axios.patch(`${API_URL}/api/meals/${id}/toggle-availability`);
             if (response.data.success) {
                 toast.success(response.data.message);
-                fetchMeals();
+                refreshMeals();
             }
         } catch (error) {
             toast.error('Failed to toggle availability');
@@ -132,6 +198,7 @@ export const AdminProvider = ({ children }) => {
     const fetchOrders = useCallback(async (params = {}) => {
         try {
             setLoading(true);
+            lastOrderParams.current = params;
             const response = await axios.get(`${API_URL}/api/orders/admin/all`, { params });
             if (response.data.success) {
                 setOrders(response.data.data);
@@ -144,12 +211,14 @@ export const AdminProvider = ({ children }) => {
         }
     }, [API_URL]);
 
+    const refreshOrders = useCallback(() => fetchOrders(lastOrderParams.current), [fetchOrders]);
+
     const updateOrderStatus = async (id, status, note = '') => {
         try {
             const response = await axios.patch(`${API_URL}/api/orders/admin/${id}/status`, { status, note });
             if (response.data.success) {
                 toast.success('Order status updated');
-                fetchOrders();
+                refreshOrders();
                 return { success: true };
             }
         } catch (error) {
@@ -296,6 +365,7 @@ export const AdminProvider = ({ children }) => {
     const prependLiveOrder = useCallback((payload) => {
         const newOrder = {
             _id: payload.orderId,
+            kitchen: payload.kitchen,
             status: payload.status,
             totalAmount: payload.totalAmount,
             user: payload.user,
@@ -331,6 +401,13 @@ export const AdminProvider = ({ children }) => {
         // Dashboard
         dashboardStats,
         fetchDashboardStats,
+        
+        // Kitchens
+        kitchens,
+        fetchKitchens,
+        createKitchen,
+        updateKitchen,
+        setKitchenStaff,
         
         // Meals
         meals,

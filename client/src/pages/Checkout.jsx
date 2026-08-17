@@ -1,14 +1,16 @@
 import { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import { toast } from 'react-toastify';
 import { useApp } from '../context/AppContext';
+import { getKitchenId } from '../utils/kitchen';
 import LoadingSpinner from '../components/LoadingSpinner';
-import { MapPin, Plus, CreditCard, Truck, Check, Copy, Wallet, Smartphone } from 'lucide-react';
+import { MapPin, Plus, CreditCard, Truck, Check, Copy, Wallet, Smartphone, ChefHat, AlertTriangle } from 'lucide-react';
 
 const Checkout = () => {
     const {
         cart,
+        cartKitchen,
         getCartTotal,
         getDeliveryCharge,
         clearCart,
@@ -42,6 +44,12 @@ const Checkout = () => {
     const cartTotal = getCartTotal();
     const deliveryCharge = getDeliveryCharge();
     const finalTotal = cartTotal + deliveryCharge;
+
+    // The server rejects multi-kitchen orders, so catch it before we get there
+    const hasMixedKitchens = new Set(cart.map(item => getKitchenId(item))).size > 1;
+    // Payments go to the kitchen fulfilling the order, falling back to platform settings
+    const upiId = cartKitchen?.upiId || settings.upiId;
+    const upiName = cartKitchen?.name || settings.upiName || 'Meal Express';
 
     useEffect(() => {
         if (authLoading) return;
@@ -106,6 +114,11 @@ const Checkout = () => {
     };
 
     const handlePlaceOrder = async () => {
+        if (hasMixedKitchens) {
+            toast.error('An order can only contain items from one kitchen');
+            return;
+        }
+
         if (!selectedAddress) {
             toast.error('Please select a delivery address');
             return;
@@ -163,6 +176,29 @@ const Checkout = () => {
         <div className="min-h-screen bg-gray-50 py-8">
             <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
                 <h1 className="text-2xl md:text-3xl font-bold text-gray-900 mb-8">Checkout</h1>
+
+                {hasMixedKitchens ? (
+                    <div className="flex items-start space-x-3 mb-6 p-4 bg-red-50 border border-red-200 rounded-xl">
+                        <AlertTriangle className="w-5 h-5 text-red-500 flex-shrink-0 mt-0.5" />
+                        <div>
+                            <p className="font-medium text-red-700">Your cart mixes items from different kitchens</p>
+                            <p className="text-sm text-red-600 mt-1">
+                                An order can only contain items from one kitchen. Please remove the extra items in your{' '}
+                                <Link to="/cart" className="underline font-medium">cart</Link>.
+                            </p>
+                        </div>
+                    </div>
+                ) : cartKitchen?.name && (
+                    <div className="flex items-center space-x-3 mb-6 p-4 bg-orange-50 border border-orange-100 rounded-xl">
+                        <div className="w-10 h-10 bg-gradient-to-br from-orange-500 to-red-500 rounded-lg flex items-center justify-center">
+                            <ChefHat className="w-5 h-5 text-white" />
+                        </div>
+                        <div>
+                            <p className="text-sm text-gray-500">Ordering from</p>
+                            <p className="font-semibold text-gray-900">{cartKitchen.name}</p>
+                        </div>
+                    </div>
+                )}
 
                 <div className="grid lg:grid-cols-3 gap-8">
                     {/* Main Content */}
@@ -364,7 +400,7 @@ const Checkout = () => {
                                 </label>
 
                                 {/* UPI Payment Details */}
-                                {paymentMethod === 'upi' && settings.upiId && (
+                                {paymentMethod === 'upi' && upiId && (
                                     <div className="mt-4 p-4 bg-gradient-to-r from-purple-50 to-blue-50 rounded-xl border border-purple-200">
                                         <div className="flex items-center space-x-2 mb-3">
                                             <Smartphone className="w-5 h-5 text-purple-600" />
@@ -373,17 +409,17 @@ const Checkout = () => {
                                         
                                         <div className="bg-white rounded-lg p-4 shadow-sm">
                                             <p className="text-sm text-gray-500 mb-1">Pay to</p>
-                                            <p className="font-semibold text-gray-900">{settings.upiName || 'Meal Express'}</p>
+                                            <p className="font-semibold text-gray-900">{upiName}</p>
                                             
                                             <div className="flex items-center justify-between mt-3 p-3 bg-gray-50 rounded-lg">
                                                 <div>
                                                     <p className="text-xs text-gray-500">UPI ID</p>
-                                                    <p className="font-mono font-medium text-gray-900">{settings.upiId}</p>
+                                                    <p className="font-mono font-medium text-gray-900">{upiId}</p>
                                                 </div>
                                                 <button
                                                     type="button"
                                                     onClick={() => {
-                                                        navigator.clipboard.writeText(settings.upiId);
+                                                        navigator.clipboard.writeText(upiId);
                                                         setUpiCopied(true);
                                                         toast.success('UPI ID copied!');
                                                         setTimeout(() => setUpiCopied(false), 3000);
@@ -408,7 +444,7 @@ const Checkout = () => {
                                     </div>
                                 )}
 
-                                {paymentMethod === 'upi' && !settings.upiId && (
+                                {paymentMethod === 'upi' && !upiId && (
                                     <div className="mt-4 p-4 bg-red-50 rounded-lg border border-red-200">
                                         <p className="text-sm text-red-600">
                                             UPI payment is not available at the moment. Please select Cash on Delivery.
@@ -470,9 +506,9 @@ const Checkout = () => {
 
                             <button
                                 onClick={handlePlaceOrder}
-                                disabled={loading || !selectedAddress}
+                                disabled={loading || !selectedAddress || hasMixedKitchens}
                                 className={`w-full mt-6 flex items-center justify-center space-x-2 px-6 py-3 rounded-lg font-semibold transition-all ${
-                                    !loading && selectedAddress
+                                    !loading && selectedAddress && !hasMixedKitchens
                                         ? 'bg-gradient-to-r from-orange-500 to-red-500 text-white hover:from-orange-600 hover:to-red-600'
                                         : 'bg-gray-200 text-gray-400 cursor-not-allowed'
                                 }`}

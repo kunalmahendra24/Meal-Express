@@ -1,59 +1,86 @@
 import { useState, useEffect, useMemo } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import axios from 'axios';
 import { useApp } from '../context/AppContext';
+import { getKitchenId } from '../utils/kitchen';
 import MealCard from '../components/MealCard';
 import LoadingSpinner from '../components/LoadingSpinner';
 import { Search, Filter, X, Leaf, Drumstick, Store, ChefHat, Star, Clock, Phone } from 'lucide-react';
 
 const Menu = () => {
     const { API_URL } = useApp();
+    const [searchParams, setSearchParams] = useSearchParams();
+    const kitchenFilter = searchParams.get('kitchen') || 'all';
+
     const [meals, setMeals] = useState([]);
+    const [kitchens, setKitchens] = useState([]);
     const [loading, setLoading] = useState(true);
     const [search, setSearch] = useState('');
     const [category, setCategory] = useState('all');
     const [sort, setSort] = useState('');
-    const [viewMode, setViewMode] = useState('vendor'); // 'vendor' or 'all'
+    const [viewMode, setViewMode] = useState('kitchen'); // 'kitchen' or 'all'
     const [pagination, setPagination] = useState({ page: 1, pages: 1, total: 0 });
 
-    // Group meals by admin/vendor
-    const mealsByVendor = useMemo(() => {
+    // Group meals by the kitchen that cooks them
+    const mealsByKitchen = useMemo(() => {
         const grouped = {};
         meals.forEach(meal => {
-            const vendorId = meal.createdBy?._id || 'unknown';
-            const vendorName = meal.createdBy?.name || 'Meal Express Kitchen';
-            const vendorRole = meal.createdBy?.role || 'admin';
-            const vendorPhone = meal.createdBy?.phone || null;
-            const vendorEmail = meal.createdBy?.email || null;
-            
-            if (!grouped[vendorId]) {
-                grouped[vendorId] = {
-                    id: vendorId,
-                    name: vendorName,
-                    role: vendorRole,
-                    phone: vendorPhone,
-                    email: vendorEmail,
+            const kitchenId = getKitchenId(meal) || 'unknown';
+            const kitchen = typeof meal.kitchen === 'object' ? meal.kitchen : null;
+
+            if (!grouped[kitchenId]) {
+                grouped[kitchenId] = {
+                    id: kitchenId,
+                    name: kitchen?.name || 'Meal Express Kitchen',
+                    phone: kitchen?.phone || null,
                     meals: [],
                     totalMeals: 0
                 };
             }
-            grouped[vendorId].meals.push(meal);
-            grouped[vendorId].totalMeals++;
+            grouped[kitchenId].meals.push(meal);
+            grouped[kitchenId].totalMeals++;
         });
         return Object.values(grouped);
     }, [meals]);
 
-    // Call admin function
-    const callAdmin = (phone, name) => {
+    const selectedKitchen = kitchens.find(k => k._id === kitchenFilter);
+
+    // Call kitchen function
+    const callKitchen = (phone, name) => {
         if (phone) {
             window.location.href = `tel:${phone}`;
         } else {
-            alert(`Phone number not available for ${name}. Please contact through email.`);
+            alert(`Phone number not available for ${name}.`);
         }
     };
 
+    const selectKitchen = (kitchenId) => {
+        const next = new URLSearchParams(searchParams);
+        if (kitchenId === 'all') {
+            next.delete('kitchen');
+        } else {
+            next.set('kitchen', kitchenId);
+        }
+        setSearchParams(next);
+    };
+
+    useEffect(() => {
+        const fetchKitchens = async () => {
+            try {
+                const response = await axios.get(`${API_URL}/api/kitchens`);
+                if (response.data.success) {
+                    setKitchens(response.data.data);
+                }
+            } catch (error) {
+                console.error('Error fetching kitchens:', error);
+            }
+        };
+        fetchKitchens();
+    }, [API_URL]);
+
     useEffect(() => {
         fetchMeals();
-    }, [category, sort]);
+    }, [category, sort, kitchenFilter]);
 
     const fetchMeals = async (page = 1) => {
         try {
@@ -62,6 +89,7 @@ const Menu = () => {
             if (category !== 'all') params.category = category;
             if (sort) params.sort = sort;
             if (search) params.search = search;
+            if (kitchenFilter !== 'all') params.kitchen = kitchenFilter;
 
             const response = await axios.get(`${API_URL}/api/meals`, { params });
             if (response.data.success) {
@@ -84,6 +112,7 @@ const Menu = () => {
         setSearch('');
         setCategory('all');
         setSort('');
+        selectKitchen('all');
     };
 
     const categories = [
@@ -106,8 +135,14 @@ const Menu = () => {
             {/* Header */}
             <div className="bg-gradient-to-r from-orange-500 to-red-500 py-12">
                 <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-                    <h1 className="text-3xl md:text-4xl font-bold text-white text-center">Our Menu</h1>
-                    <p className="mt-2 text-orange-100 text-center">Discover delicious homemade meals</p>
+                    <h1 className="text-3xl md:text-4xl font-bold text-white text-center">
+                        {selectedKitchen ? selectedKitchen.name : 'Our Menu'}
+                    </h1>
+                    <p className="mt-2 text-orange-100 text-center">
+                        {selectedKitchen
+                            ? 'Browsing meals from this kitchen'
+                            : 'Discover delicious homemade meals'}
+                    </p>
                     
                     {/* Search Bar */}
                     <form onSubmit={handleSearch} className="mt-8 max-w-2xl mx-auto">
@@ -132,6 +167,42 @@ const Menu = () => {
             </div>
 
             <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+                {/* Kitchen Filter */}
+                {kitchens.length > 0 && (
+                    <div className="mb-8">
+                        <div className="flex items-center space-x-2 mb-3">
+                            <ChefHat className="w-5 h-5 text-orange-500" />
+                            <h2 className="font-semibold text-gray-900">Browse by kitchen</h2>
+                        </div>
+                        <div className="flex flex-wrap gap-2">
+                            <button
+                                onClick={() => selectKitchen('all')}
+                                className={`px-4 py-2 rounded-full text-sm font-medium transition-all ${
+                                    kitchenFilter === 'all'
+                                        ? 'bg-gray-900 text-white'
+                                        : 'bg-white text-gray-600 hover:bg-gray-100 border'
+                                }`}
+                            >
+                                All Kitchens
+                            </button>
+                            {kitchens.map(kitchen => (
+                                <button
+                                    key={kitchen._id}
+                                    onClick={() => selectKitchen(kitchen._id)}
+                                    className={`flex items-center space-x-1 px-4 py-2 rounded-full text-sm font-medium transition-all ${
+                                        kitchenFilter === kitchen._id
+                                            ? 'bg-gray-900 text-white'
+                                            : 'bg-white text-gray-600 hover:bg-gray-100 border'
+                                    }`}
+                                >
+                                    <ChefHat className="w-4 h-4" />
+                                    <span>{kitchen.name}</span>
+                                </button>
+                            ))}
+                        </div>
+                    </div>
+                )}
+
                 {/* Filters */}
                 <div className="flex flex-wrap items-center justify-between gap-4 mb-8">
                     {/* Category Tabs */}
@@ -164,7 +235,7 @@ const Menu = () => {
                             ))}
                         </select>
                         
-                        {(search || category !== 'all' || sort) && (
+                        {(search || category !== 'all' || sort || kitchenFilter !== 'all') && (
                             <button
                                 onClick={clearFilters}
                                 className="flex items-center space-x-1 px-3 py-2 text-gray-500 hover:text-gray-700"
@@ -180,21 +251,21 @@ const Menu = () => {
                 <div className="flex flex-wrap items-center justify-between gap-4 mb-6">
                     <p className="text-gray-600">
                         Showing {meals.length} of {pagination.total} meals
-                        {viewMode === 'vendor' && mealsByVendor.length > 0 && (
-                            <span className="ml-2 text-orange-600">• {mealsByVendor.length} vendor{mealsByVendor.length > 1 ? 's' : ''}</span>
+                        {viewMode === 'kitchen' && mealsByKitchen.length > 0 && (
+                            <span className="ml-2 text-orange-600">• {mealsByKitchen.length} kitchen{mealsByKitchen.length > 1 ? 's' : ''}</span>
                         )}
                     </p>
                     <div className="flex items-center bg-white rounded-lg border p-1">
                         <button
-                            onClick={() => setViewMode('vendor')}
+                            onClick={() => setViewMode('kitchen')}
                             className={`flex items-center space-x-2 px-4 py-2 rounded-md text-sm font-medium transition-all ${
-                                viewMode === 'vendor'
+                                viewMode === 'kitchen'
                                     ? 'bg-orange-500 text-white'
                                     : 'text-gray-600 hover:bg-gray-100'
                             }`}
                         >
                             <Store className="w-4 h-4" />
-                            <span>By Vendor</span>
+                            <span>By Kitchen</span>
                         </button>
                         <button
                             onClick={() => setViewMode('all')}
@@ -217,12 +288,12 @@ const Menu = () => {
                     </div>
                 ) : meals.length > 0 ? (
                     <>
-                        {viewMode === 'vendor' ? (
-                            /* Vendor-wise View */
+                        {viewMode === 'kitchen' ? (
+                            /* Kitchen-wise View */
                             <div className="space-y-8">
-                                {mealsByVendor.map(vendor => (
-                                    <div key={vendor.id} className="bg-white rounded-2xl shadow-sm overflow-hidden border border-gray-100">
-                                        {/* Vendor Header */}
+                                {mealsByKitchen.map(kitchen => (
+                                    <div key={kitchen.id} className="bg-white rounded-2xl shadow-sm overflow-hidden border border-gray-100">
+                                        {/* Kitchen Header */}
                                         <div className="bg-gradient-to-r from-orange-50 to-red-50 p-5 border-b">
                                             <div className="flex items-center justify-between flex-wrap gap-4">
                                                 <div className="flex items-center space-x-4">
@@ -230,14 +301,10 @@ const Menu = () => {
                                                         <ChefHat className="w-7 h-7 text-white" />
                                                     </div>
                                                     <div>
-                                                        <h3 className="text-xl font-bold text-gray-900">{vendor.name}'s Kitchen</h3>
+                                                        <h3 className="text-xl font-bold text-gray-900">{kitchen.name}</h3>
                                                         <div className="flex flex-wrap items-center gap-2 mt-1">
-                                                            <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${
-                                                                vendor.role === 'super_admin' 
-                                                                    ? 'bg-purple-100 text-purple-700' 
-                                                                    : 'bg-blue-100 text-blue-700'
-                                                            }`}>
-                                                                {vendor.role === 'super_admin' ? 'Premium Chef' : 'Verified Chef'}
+                                                            <span className="px-2 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-700">
+                                                                Verified Kitchen
                                                             </span>
                                                             <span className="flex items-center text-sm text-gray-500">
                                                                 <Star className="w-4 h-4 text-yellow-400 fill-yellow-400 mr-1" />
@@ -251,26 +318,33 @@ const Menu = () => {
                                                     </div>
                                                 </div>
                                                 <div className="flex items-center space-x-4">
-                                                    {/* Call Admin Button */}
+                                                    {kitchenFilter !== kitchen.id && kitchen.id !== 'unknown' && (
+                                                        <button
+                                                            onClick={() => selectKitchen(kitchen.id)}
+                                                            className="px-4 py-2.5 border border-orange-300 text-orange-600 rounded-xl hover:bg-orange-50 transition-all font-medium"
+                                                        >
+                                                            Only this kitchen
+                                                        </button>
+                                                    )}
                                                     <button
-                                                        onClick={() => callAdmin(vendor.phone, vendor.name)}
+                                                        onClick={() => callKitchen(kitchen.phone, kitchen.name)}
                                                         className="flex items-center space-x-2 px-4 py-2.5 bg-green-500 text-white rounded-xl hover:bg-green-600 transition-all shadow-md hover:shadow-lg"
                                                     >
                                                         <Phone className="w-4 h-4" />
-                                                        <span className="font-medium">Call {vendor.name.split(' ')[0]}</span>
+                                                        <span className="font-medium">Call Kitchen</span>
                                                     </button>
                                                     <div className="text-right hidden sm:block">
-                                                        <span className="text-2xl font-bold text-orange-600">{vendor.totalMeals}</span>
+                                                        <span className="text-2xl font-bold text-orange-600">{kitchen.totalMeals}</span>
                                                         <p className="text-sm text-gray-500">Items</p>
                                                     </div>
                                                 </div>
                                             </div>
                                         </div>
                                         
-                                        {/* Vendor's Meals */}
+                                        {/* Kitchen's Meals */}
                                         <div className="p-5">
                                             <div className="grid sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-                                                {vendor.meals.map(meal => (
+                                                {kitchen.meals.map(meal => (
                                                     <MealCard key={meal._id} meal={meal} compact />
                                                 ))}
                                             </div>

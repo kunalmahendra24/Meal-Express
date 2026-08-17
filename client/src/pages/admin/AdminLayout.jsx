@@ -12,7 +12,8 @@ import {
     X,
     ChevronRight,
     LogOut,
-    Home
+    Home,
+    ChefHat
 } from 'lucide-react';
 
 const AdminLayout = () => {
@@ -55,6 +56,7 @@ const AdminLayout = () => {
 
     const menuItems = [
         { path: '/admin', icon: LayoutDashboard, label: 'Dashboard', exact: true },
+        { path: '/admin/kitchens', icon: ChefHat, label: 'Kitchens' },
         { path: '/admin/meals', icon: UtensilsCrossed, label: 'Meals' },
         { path: '/admin/orders', icon: ShoppingBag, label: 'Orders' },
         { path: '/admin/users', icon: Users, label: 'Users' },

@@ -1,3 +1,4 @@
+import mongoose from 'mongoose';
 import User from '../models/userModel.js';
 import Order from '../models/orderModel.js';
 import Subscription from '../models/subscriptionModel.js';
@@ -13,6 +14,13 @@ export const getDashboardStats = async (req, res) => {
         const startOfWeek = new Date(today);
         startOfWeek.setDate(today.getDate() - today.getDay());
         
+        // A kitchen admin only sees their own kitchen's numbers; super_admin sees everything.
+        // An admin with no kitchen yet matches nothing rather than the whole platform.
+        const scopeToKitchen = req.userRole !== 'super_admin';
+        const kitchenScope = scopeToKitchen
+            ? { kitchen: req.kitchenId ? new mongoose.Types.ObjectId(req.kitchenId) : null }
+            : {};
+        
         // Basic counts
         const [
             totalUsers,
@@ -24,41 +32,42 @@ export const getDashboardStats = async (req, res) => {
             monthOrders
         ] = await Promise.all([
             User.countDocuments({ role: 'user' }),
-            Meal.countDocuments(),
-            Order.countDocuments(),
+            Meal.countDocuments(kitchenScope),
+            Order.countDocuments(kitchenScope),
             Subscription.countDocuments({ status: 'active' }),
-            Order.countDocuments({ createdAt: { $gte: today } }),
-            Order.countDocuments({ createdAt: { $gte: startOfWeek } }),
-            Order.countDocuments({ createdAt: { $gte: startOfMonth } })
+            Order.countDocuments({ ...kitchenScope, createdAt: { $gte: today } }),
+            Order.countDocuments({ ...kitchenScope, createdAt: { $gte: startOfWeek } }),
+            Order.countDocuments({ ...kitchenScope, createdAt: { $gte: startOfMonth } })
         ]);
         
         // Revenue calculations
         const [todayRevenue, weekRevenue, monthRevenue, totalRevenue] = await Promise.all([
             Order.aggregate([
-                { $match: { createdAt: { $gte: today }, status: { $ne: 'cancelled' } } },
+                { $match: { ...kitchenScope, createdAt: { $gte: today }, status: { $ne: 'cancelled' } } },
                 { $group: { _id: null, total: { $sum: '$totalAmount' } } }
             ]),
             Order.aggregate([
-                { $match: { createdAt: { $gte: startOfWeek }, status: { $ne: 'cancelled' } } },
+                { $match: { ...kitchenScope, createdAt: { $gte: startOfWeek }, status: { $ne: 'cancelled' } } },
                 { $group: { _id: null, total: { $sum: '$totalAmount' } } }
             ]),
             Order.aggregate([
-                { $match: { createdAt: { $gte: startOfMonth }, status: { $ne: 'cancelled' } } },
+                { $match: { ...kitchenScope, createdAt: { $gte: startOfMonth }, status: { $ne: 'cancelled' } } },
                 { $group: { _id: null, total: { $sum: '$totalAmount' } } }
             ]),
             Order.aggregate([
-                { $match: { status: { $ne: 'cancelled' } } },
+                { $match: { ...kitchenScope, status: { $ne: 'cancelled' } } },
                 { $group: { _id: null, total: { $sum: '$totalAmount' } } }
             ])
         ]);
         
         // Order status breakdown
         const orderStatusBreakdown = await Order.aggregate([
+            { $match: kitchenScope },
             { $group: { _id: '$status', count: { $sum: 1 } } }
         ]);
         
         // Recent orders
-        const recentOrders = await Order.find()
+        const recentOrders = await Order.find(kitchenScope)
             .sort({ createdAt: -1 })
             .limit(5)
             .populate('user', 'name email');
@@ -74,6 +83,7 @@ export const getDashboardStats = async (req, res) => {
         const dailyOrders = await Order.aggregate([
             {
                 $match: {
+                    ...kitchenScope,
                     createdAt: { $gte: last7Days[0] }
                 }
             },
@@ -91,6 +101,7 @@ export const getDashboardStats = async (req, res) => {
         
         // Top selling meals
         const topMeals = await Order.aggregate([
+            { $match: kitchenScope },
             { $unwind: '$items' },
             {
                 $group: {
@@ -194,8 +205,13 @@ export const getUserDetails = async (req, res) => {
             return res.status(404).json({ success: false, message: 'User not found' });
         }
         
-        // Get user's order history
-        const orders = await Order.find({ user: user._id })
+        // Get user's order history, limited to the requesting admin's kitchen
+        const orderQuery = { user: user._id };
+        if (req.userRole !== 'super_admin') {
+            orderQuery.kitchen = req.kitchenId || null;
+        }
+        
+        const orders = await Order.find(orderQuery)
             .sort({ createdAt: -1 })
             .limit(10);
         

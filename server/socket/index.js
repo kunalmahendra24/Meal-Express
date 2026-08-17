@@ -23,13 +23,14 @@ export const initSocket = (httpServer, allowedOrigins) => {
                 return next(new Error('unauthorized'));
             }
 
-            const user = await userModel.findById(decoded.id).select('role isActive');
+            const user = await userModel.findById(decoded.id).select('role isActive kitchen');
             if (!user || !user.isActive) {
                 return next(new Error('unauthorized'));
             }
 
             socket.userId = decoded.id.toString();
             socket.role = user.role;
+            socket.kitchenId = user.kitchen ? user.kitchen.toString() : null;
             next();
         } catch {
             next(new Error('unauthorized'));
@@ -39,12 +40,15 @@ export const initSocket = (httpServer, allowedOrigins) => {
     io.on('connection', (socket) => {
         socket.join(`user:${socket.userId}`);
 
-        if (socket.role === 'admin' || socket.role === 'super_admin') {
+        // A kitchen admin only listens to their own kitchen; super_admins observe everything
+        if (socket.role === 'super_admin') {
             socket.join('admins');
+        } else if (socket.role === 'admin' && socket.kitchenId) {
+            socket.join(`kitchen:${socket.kitchenId}`);
         }
 
         if (process.env.NODE_ENV !== 'production') {
-            console.debug(`[socket] connected user=${socket.userId} role=${socket.role}`);
+            console.debug(`[socket] connected user=${socket.userId} role=${socket.role} kitchen=${socket.kitchenId || 'none'}`);
         }
 
         socket.on('disconnect', () => {

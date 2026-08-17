@@ -1,15 +1,24 @@
 import Meal from '../models/mealModel.js';
+import Kitchen from '../models/kitchenModel.js';
+
+// Fields of a kitchen that are safe to expose on public meal responses
+const KITCHEN_PUBLIC_FIELDS = 'name phone upiId isActive';
 
 // Get all meals (public)
 export const getAllMeals = async (req, res) => {
     try {
-        const { category, search, sort, page = 1, limit = 12, available } = req.query;
+        const { category, search, sort, page = 1, limit = 12, available, kitchen } = req.query;
         
         const query = {};
         
         // Filter by category
         if (category && category !== 'all') {
             query.category = category;
+        }
+        
+        // Filter by kitchen so the storefront can show one kitchen at a time
+        if (kitchen && kitchen !== 'all') {
+            query.kitchen = kitchen;
         }
         
         // Filter by availability
@@ -44,6 +53,7 @@ export const getAllMeals = async (req, res) => {
                 .sort(sortOption)
                 .skip(skip)
                 .limit(parseInt(limit))
+                .populate('kitchen', KITCHEN_PUBLIC_FIELDS)
                 .populate('createdBy', 'name email role phone')
                 .populate('updatedBy', 'name email role phone'),
             Meal.countDocuments(query)
@@ -69,6 +79,7 @@ export const getAllMeals = async (req, res) => {
 export const getMealById = async (req, res) => {
     try {
         const meal = await Meal.findById(req.params.id)
+            .populate('kitchen', KITCHEN_PUBLIC_FIELDS)
             .populate('createdBy', 'name email role phone')
             .populate('updatedBy', 'name email role phone');
         
@@ -81,6 +92,27 @@ export const getMealById = async (req, res) => {
         console.error('Error fetching meal:', error);
         res.status(500).json({ success: false, message: 'Server error' });
     }
+};
+
+// Resolve which kitchen an admin write should apply to.
+// A normal admin is locked to their own kitchen; a super_admin must name one.
+const resolveKitchenForWrite = async (req) => {
+    if (req.userRole === 'super_admin') {
+        const kitchenId = req.body.kitchen || req.kitchenId;
+        if (!kitchenId) {
+            return { error: 'A kitchen is required. Pass "kitchen" in the request body.' };
+        }
+        const kitchen = await Kitchen.findById(kitchenId).select('_id');
+        if (!kitchen) {
+            return { error: 'Kitchen not found' };
+        }
+        return { kitchenId: kitchen._id.toString() };
+    }
+
+    if (!req.kitchenId) {
+        return { error: 'Your admin account is not linked to a kitchen' };
+    }
+    return { kitchenId: req.kitchenId };
 };
 
 // Create meal (admin only)
@@ -100,6 +132,11 @@ export const createMeal = async (req, res) => {
             monthlyPrice
         } = req.body;
         
+        const { kitchenId, error } = await resolveKitchenForWrite(req);
+        if (error) {
+            return res.status(400).json({ success: false, message: error });
+        }
+        
         const meal = new Meal({
             name,
             description,
@@ -112,6 +149,7 @@ export const createMeal = async (req, res) => {
             tags: tags || [],
             weeklyPrice,
             monthlyPrice,
+            kitchen: kitchenId,
             createdBy: req.userId,
             updatedBy: req.userId
         });
@@ -119,6 +157,7 @@ export const createMeal = async (req, res) => {
         await meal.save();
         
         // Populate creator info before sending response
+        await meal.populate('kitchen', KITCHEN_PUBLIC_FIELDS);
         await meal.populate('createdBy', 'name email role phone');
         
         res.status(201).json({
@@ -132,24 +171,41 @@ export const createMeal = async (req, res) => {
     }
 };
 
+// Reject writes by an admin against another kitchen's meal
+const denyCrossKitchenMeal = (req, meal) => {
+    if (req.userRole === 'super_admin') return false;
+    return meal.kitchen?.toString() !== req.kitchenId;
+};
+
 // Update meal (admin only)
 export const updateMeal = async (req, res) => {
     try {
-        const meal = await Meal.findByIdAndUpdate(
-            req.params.id,
-            { 
-                $set: {
-                    ...req.body,
-                    updatedBy: req.userId
-                }
-            },
-            { new: true, runValidators: true }
-        ).populate('createdBy', 'name email role phone')
-         .populate('updatedBy', 'name email role phone');
+        const existing = await Meal.findById(req.params.id).select('kitchen');
         
-        if (!meal) {
+        if (!existing) {
             return res.status(404).json({ success: false, message: 'Meal not found' });
         }
+        
+        if (denyCrossKitchenMeal(req, existing)) {
+            return res.status(403).json({
+                success: false,
+                message: 'You can only manage meals from your own kitchen'
+            });
+        }
+        
+        const updates = { ...req.body, updatedBy: req.userId };
+        // Only a super_admin may move a meal between kitchens
+        if (req.userRole !== 'super_admin') {
+            delete updates.kitchen;
+        }
+        
+        const meal = await Meal.findByIdAndUpdate(
+            req.params.id,
+            { $set: updates },
+            { new: true, runValidators: true }
+        ).populate('kitchen', KITCHEN_PUBLIC_FIELDS)
+         .populate('createdBy', 'name email role phone')
+         .populate('updatedBy', 'name email role phone');
         
         res.json({
             success: true,
@@ -165,11 +221,20 @@ export const updateMeal = async (req, res) => {
 // Delete meal (admin only)
 export const deleteMeal = async (req, res) => {
     try {
-        const meal = await Meal.findByIdAndDelete(req.params.id);
+        const meal = await Meal.findById(req.params.id).select('kitchen');
         
         if (!meal) {
             return res.status(404).json({ success: false, message: 'Meal not found' });
         }
+        
+        if (denyCrossKitchenMeal(req, meal)) {
+            return res.status(403).json({
+                success: false,
+                message: 'You can only manage meals from your own kitchen'
+            });
+        }
+        
+        await Meal.findByIdAndDelete(req.params.id);
         
         res.json({
             success: true,
@@ -190,6 +255,13 @@ export const toggleAvailability = async (req, res) => {
             return res.status(404).json({ success: false, message: 'Meal not found' });
         }
         
+        if (denyCrossKitchenMeal(req, meal)) {
+            return res.status(403).json({
+                success: false,
+                message: 'You can only manage meals from your own kitchen'
+            });
+        }
+        
         meal.isAvailable = !meal.isAvailable;
         await meal.save();
         
@@ -207,9 +279,17 @@ export const toggleAvailability = async (req, res) => {
 // Get featured/popular meals
 export const getFeaturedMeals = async (req, res) => {
     try {
-        const meals = await Meal.find({ isAvailable: true })
+        const { kitchen } = req.query;
+        
+        const query = { isAvailable: true };
+        if (kitchen && kitchen !== 'all') {
+            query.kitchen = kitchen;
+        }
+        
+        const meals = await Meal.find(query)
             .sort({ 'ratings.average': -1, 'ratings.count': -1 })
-            .limit(6);
+            .limit(6)
+            .populate('kitchen', KITCHEN_PUBLIC_FIELDS);
         
         res.json({ success: true, data: meals });
     } catch (error) {
@@ -222,11 +302,16 @@ export const getFeaturedMeals = async (req, res) => {
 export const getMealsByCategory = async (req, res) => {
     try {
         const { category } = req.params;
+        const { kitchen } = req.query;
         
-        const meals = await Meal.find({ 
-            category, 
-            isAvailable: true 
-        }).sort({ createdAt: -1 });
+        const query = { category, isAvailable: true };
+        if (kitchen && kitchen !== 'all') {
+            query.kitchen = kitchen;
+        }
+        
+        const meals = await Meal.find(query)
+            .sort({ createdAt: -1 })
+            .populate('kitchen', KITCHEN_PUBLIC_FIELDS);
         
         res.json({ success: true, data: meals });
     } catch (error) {

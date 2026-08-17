@@ -15,6 +15,7 @@ export const createOrder = async (req, res) => {
         // Validate and calculate total
         let totalAmount = 0;
         const orderItems = [];
+        const kitchenIds = new Set();
         
         for (const item of items) {
             const meal = await Meal.findById(item.mealId);
@@ -30,6 +31,14 @@ export const createOrder = async (req, res) => {
                     message: `${meal.name} is currently unavailable` 
                 });
             }
+            if (!meal.kitchen) {
+                return res.status(400).json({
+                    success: false,
+                    message: `${meal.name} is not linked to a kitchen and cannot be ordered`
+                });
+            }
+            
+            kitchenIds.add(meal.kitchen.toString());
             
             const itemTotal = meal.price * item.quantity;
             totalAmount += itemTotal;
@@ -42,6 +51,16 @@ export const createOrder = async (req, res) => {
                 image: meal.images[0] || ''
             });
         }
+        
+        // One order = one kitchen
+        if (kitchenIds.size > 1) {
+            return res.status(400).json({
+                success: false,
+                message: 'An order can only contain items from one kitchen'
+            });
+        }
+        
+        const [kitchenId] = [...kitchenIds];
         
         // Check minimum order amount
         const minOrderAmount = await Settings.getSetting('minimum_order_amount', 100);
@@ -65,6 +84,7 @@ export const createOrder = async (req, res) => {
         
         const order = new Order({
             user: req.userId,
+            kitchen: kitchenId,
             items: orderItems,
             totalAmount,
             deliveryAddress,
@@ -107,7 +127,8 @@ export const getUserOrders = async (req, res) => {
                 .sort({ createdAt: -1 })
                 .skip(skip)
                 .limit(parseInt(limit))
-                .populate('items.meal', 'name images'),
+                .populate('items.meal', 'name images')
+                .populate('kitchen', 'name phone'),
             Order.countDocuments(query)
         ]);
         
@@ -132,7 +153,8 @@ export const getOrderById = async (req, res) => {
         const order = await Order.findOne({
             _id: req.params.id,
             user: req.userId
-        }).populate('items.meal', 'name images category');
+        }).populate('items.meal', 'name images category')
+          .populate('kitchen', 'name phone');
         
         if (!order) {
             return res.status(404).json({ success: false, message: 'Order not found' });
@@ -183,12 +205,32 @@ export const cancelOrder = async (req, res) => {
 
 // ============ ADMIN FUNCTIONS ============
 
+// Reject reads/writes by an admin against another kitchen's order
+const denyCrossKitchenOrder = (req, order) => {
+    if (req.userRole === 'super_admin') return false;
+    return order.kitchen?.toString() !== req.kitchenId;
+};
+
 // Get all orders (admin)
 export const getAllOrders = async (req, res) => {
     try {
-        const { page = 1, limit = 20, status, startDate, endDate } = req.query;
+        const { page = 1, limit = 20, status, startDate, endDate, kitchen } = req.query;
         
         const query = {};
+        
+        if (req.userRole === 'admin') {
+            // An admin only ever sees their own kitchen's orders
+            if (!req.kitchenId) {
+                return res.json({
+                    success: true,
+                    data: [],
+                    pagination: { total: 0, page: parseInt(page), pages: 0 }
+                });
+            }
+            query.kitchen = req.kitchenId;
+        } else if (kitchen && kitchen !== 'all') {
+            query.kitchen = kitchen;
+        }
         
         if (status && status !== 'all') {
             query.status = status;
@@ -207,7 +249,8 @@ export const getAllOrders = async (req, res) => {
                 .sort({ createdAt: -1 })
                 .skip(skip)
                 .limit(parseInt(limit))
-                .populate('user', 'name email phone'),
+                .populate('user', 'name email phone')
+                .populate('kitchen', 'name phone'),
             Order.countDocuments(query)
         ]);
         
@@ -240,6 +283,13 @@ export const updateOrderStatus = async (req, res) => {
         
         if (!order) {
             return res.status(404).json({ success: false, message: 'Order not found' });
+        }
+        
+        if (denyCrossKitchenOrder(req, order)) {
+            return res.status(403).json({
+                success: false,
+                message: 'You can only manage orders from your own kitchen'
+            });
         }
         
         order.status = status;
@@ -282,6 +332,15 @@ export const getOrderDetailsAdmin = async (req, res) => {
         if (!order) {
             return res.status(404).json({ success: false, message: 'Order not found' });
         }
+        
+        if (denyCrossKitchenOrder(req, order)) {
+            return res.status(403).json({
+                success: false,
+                message: 'You can only view orders from your own kitchen'
+            });
+        }
+        
+        await order.populate('kitchen', 'name phone');
         
         res.json({ success: true, data: order });
     } catch (error) {

@@ -1,11 +1,14 @@
 import { Link } from 'react-router-dom';
 import { useApp } from '../context/AppContext';
 import { resolveImageUrl } from '../utils/imageUrl';
-import { ShoppingCart, Star, Leaf, Drumstick, Plus } from 'lucide-react';
+import { getKitchenId, getKitchenName } from '../utils/kitchen';
+import { ShoppingCart, Star, Leaf, Drumstick, Plus, ChefHat } from 'lucide-react';
 
-const MealCard = ({ meal, compact = false }) => {
+const MealCard = ({ meal, compact = false, showKitchen = true }) => {
     const { addToCart } = useApp();
     const { API_URL } = useApp();
+
+    const kitchenName = getKitchenName(meal);
 
     const getCategoryIcon = (category) => {
         switch (category) {
@@ -133,6 +136,16 @@ const MealCard = ({ meal, compact = false }) => {
                     </h3>
                 </Link>
                 
+                {showKitchen && kitchenName && (
+                    <Link
+                        to={`/menu?kitchen=${getKitchenId(meal)}`}
+                        className="inline-flex items-center space-x-1 mt-1 text-xs text-gray-500 hover:text-orange-600"
+                    >
+                        <ChefHat className="w-3.5 h-3.5" />
+                        <span>{kitchenName}</span>
+                    </Link>
+                )}
+
                 <p className="text-gray-500 text-sm mt-1 line-clamp-2">
                     {meal.description}
                 </p>

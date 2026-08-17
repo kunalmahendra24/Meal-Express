@@ -9,10 +9,12 @@ import { ChefHat, Truck, Clock, Heart, ArrowRight, Star, Utensils } from 'lucide
 const Home = () => {
     const { API_URL, settings } = useApp();
     const [featuredMeals, setFeaturedMeals] = useState([]);
+    const [kitchens, setKitchens] = useState([]);
     const [loading, setLoading] = useState(true);
 
     useEffect(() => {
         fetchFeaturedMeals();
+        fetchKitchens();
     }, []);
 
     const fetchFeaturedMeals = async () => {
@@ -25,6 +27,17 @@ const Home = () => {
             console.error('Error fetching featured meals:', error);
         } finally {
             setLoading(false);
+        }
+    };
+
+    const fetchKitchens = async () => {
+        try {
+            const response = await axios.get(`${API_URL}/api/kitchens`);
+            if (response.data.success) {
+                setKitchens(response.data.data);
+            }
+        } catch (error) {
+            console.error('Error fetching kitchens:', error);
         }
     };
 
@@ -137,6 +150,45 @@ const Home = () => {
                     </div>
                 </div>
             </section>
+
+            {/* Kitchens Section */}
+            {kitchens.length > 0 && (
+                <section className="py-16 bg-white border-t">
+                    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+                        <div className="flex justify-between items-center mb-8">
+                            <div>
+                                <h2 className="text-3xl font-bold text-gray-900">Our Kitchens</h2>
+                                <p className="mt-2 text-gray-600">Order from a kitchen near you — one kitchen per order</p>
+                            </div>
+                            <Link
+                                to="/menu"
+                                className="hidden sm:inline-flex items-center text-orange-600 hover:text-orange-700 font-medium"
+                            >
+                                Browse All
+                                <ArrowRight className="ml-1 w-4 h-4" />
+                            </Link>
+                        </div>
+                        <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6">
+                            {kitchens.map(kitchen => (
+                                <Link
+                                    key={kitchen._id}
+                                    to={`/menu?kitchen=${kitchen._id}`}
+                                    className="flex items-center space-x-4 p-5 rounded-xl border border-gray-100 bg-gray-50 hover:bg-orange-50 hover:border-orange-200 transition-colors"
+                                >
+                                    <div className="w-14 h-14 flex-shrink-0 bg-gradient-to-br from-orange-500 to-red-500 rounded-xl flex items-center justify-center">
+                                        <ChefHat className="w-7 h-7 text-white" />
+                                    </div>
+                                    <div className="min-w-0">
+                                        <h3 className="font-semibold text-gray-900 truncate">{kitchen.name}</h3>
+                                        <p className="text-sm text-gray-500">View menu</p>
+                                    </div>
+                                    <ArrowRight className="w-5 h-5 text-gray-400 ml-auto" />
+                                </Link>
+                            ))}
+                        </div>
+                    </div>
+                </section>
+            )}
 
             {/* Featured Meals Section */}
             <section className="py-16 bg-gray-50">

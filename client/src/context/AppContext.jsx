@@ -1,6 +1,7 @@
 import { createContext, useContext, useState, useEffect } from 'react';
 import axios from 'axios';
 import { toast } from 'react-toastify';
+import { getKitchenId } from '../utils/kitchen';
 
 const AppContext = createContext();
 
@@ -159,7 +160,37 @@ export const AppProvider = ({ children }) => {
     };
 
     // Cart functions
-    const addToCart = (meal, quantity = 1) => {
+    // A cart may only hold meals from one kitchen, because an order is
+    // routed to exactly one kitchen on the server.
+    const cartKitchen = cart.length > 0 ? (cart[0].kitchen || null) : null;
+    const cartKitchenId = getKitchenId(cart[0]);
+
+    const addToCart = (meal, quantity = 1, { replaceKitchen = false } = {}) => {
+        const mealKitchenId = getKitchenId(meal);
+
+        if (replaceKitchen) {
+            setCart([{ ...meal, quantity }]);
+            toast.success(`Cart cleared — ${meal.name} added!`);
+            return true;
+        }
+
+        if (cart.length > 0 && cartKitchenId !== mealKitchenId) {
+            toast.error(
+                <div>
+                    <p>Your cart has items from another kitchen — clear it to order from this one.</p>
+                    <button
+                        type="button"
+                        onClick={() => addToCart(meal, quantity, { replaceKitchen: true })}
+                        className="mt-2 px-3 py-1.5 bg-orange-500 text-white rounded-lg text-sm font-medium hover:bg-orange-600"
+                    >
+                        Clear cart & add
+                    </button>
+                </div>,
+                { autoClose: 6000, closeOnClick: false }
+            );
+            return false;
+        }
+
         setCart(prevCart => {
             const existingItem = prevCart.find(item => item._id === meal._id);
             
@@ -174,6 +205,7 @@ export const AppProvider = ({ children }) => {
             return [...prevCart, { ...meal, quantity }];
         });
         toast.success(`${meal.name} added to cart!`);
+        return true;
     };
 
     const removeFromCart = (mealId) => {
@@ -233,6 +265,8 @@ export const AppProvider = ({ children }) => {
         
         // Cart
         cart,
+        cartKitchen,
+        cartKitchenId,
         addToCart,
         removeFromCart,
         updateCartQuantity,

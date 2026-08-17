@@ -27,6 +27,7 @@ import EmailVerify from './pages/EmailVerify';
 import AdminLayout from './pages/admin/AdminLayout';
 import Dashboard from './pages/admin/Dashboard';
 import MealsManagement from './pages/admin/MealsManagement';
+import KitchensManagement from './pages/admin/KitchensManagement';
 import OrdersManagement from './pages/admin/OrdersManagement';
 import UsersManagement from './pages/admin/UsersManagement';
 import SettingsManagement from './pages/admin/SettingsManagement';
@@ -116,6 +117,7 @@ function App() {
                     {/* Admin Routes */}
                     <Route path="/admin" element={<AdminLayout />}>
                         <Route index element={<Dashboard />} />
+                        <Route path="kitchens" element={<KitchensManagement />} />
                         <Route path="meals" element={<MealsManagement />} />
                         <Route path="orders" element={<OrdersManagement />} />
                         <Route path="users" element={<UsersManagement />} />

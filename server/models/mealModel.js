@@ -60,6 +60,11 @@ const mealSchema = new mongoose.Schema({
         type: Number,
         min: [0, 'Monthly price cannot be negative']
     },
+    kitchen: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'Kitchen',
+        required: [true, 'Kitchen is required']
+    },
     // Admin attribution - track who created/updated the meal
     createdBy: {
         type: mongoose.Schema.Types.ObjectId,
@@ -74,6 +79,7 @@ const mealSchema = new mongoose.Schema({
 // Index for searching
 mealSchema.index({ name: 'text', description: 'text', tags: 'text' });
 mealSchema.index({ category: 1, isAvailable: 1 });
+mealSchema.index({ kitchen: 1, isAvailable: 1 });
 
 const Meal = mongoose.models.Meal || mongoose.model('Meal', mealSchema);
 export default Meal;

@@ -1,11 +1,12 @@
 import { Link, useNavigate } from 'react-router-dom';
 import { useApp } from '../context/AppContext';
 import { resolveImageUrl } from '../utils/imageUrl';
-import { Minus, Plus, Trash2, ShoppingBag, ArrowRight, ArrowLeft } from 'lucide-react';
+import { Minus, Plus, Trash2, ShoppingBag, ArrowRight, ArrowLeft, ChefHat } from 'lucide-react';
 
 const Cart = () => {
     const {
         cart,
+        cartKitchen,
         updateCartQuantity,
         removeFromCart,
         clearCart,
@@ -62,6 +63,21 @@ const Cart = () => {
                         Clear Cart
                     </button>
                 </div>
+
+                {cartKitchen?.name && (
+                    <div className="flex items-center space-x-3 mb-6 p-4 bg-orange-50 border border-orange-100 rounded-xl">
+                        <div className="w-10 h-10 bg-gradient-to-br from-orange-500 to-red-500 rounded-lg flex items-center justify-center">
+                            <ChefHat className="w-5 h-5 text-white" />
+                        </div>
+                        <div>
+                            <p className="text-sm text-gray-500">Ordering from</p>
+                            <p className="font-semibold text-gray-900">{cartKitchen.name}</p>
+                        </div>
+                        <p className="ml-auto text-sm text-gray-500 hidden sm:block">
+                            One order can only contain items from one kitchen
+                        </p>
+                    </div>
+                )}
 
                 <div className="grid lg:grid-cols-3 gap-8">
                     {/* Cart Items */}

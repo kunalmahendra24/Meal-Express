@@ -2,12 +2,17 @@ import { useState, useEffect } from 'react';
 import { useAdmin } from '../../context/AdminContext';
 import { useApp } from '../../context/AppContext';
 import { resolveImageUrl } from '../../utils/imageUrl';
+import { getKitchenId, getKitchenName } from '../../utils/kitchen';
 import LoadingSpinner from '../../components/LoadingSpinner';
-import { Plus, Edit2, Trash2, Eye, EyeOff, Search, Upload, X, Leaf, Drumstick, User, Clock } from 'lucide-react';
+import { Plus, Edit2, Trash2, Eye, EyeOff, Search, Upload, X, Leaf, Drumstick, User, Clock, ChefHat } from 'lucide-react';
 
 const MealsManagement = () => {
-    const { meals, fetchMeals, createMeal, updateMeal, deleteMeal, toggleMealAvailability, uploadImage, loading } = useAdmin();
-    const { API_URL } = useApp();
+    const { meals, fetchMeals, createMeal, updateMeal, deleteMeal, toggleMealAvailability, uploadImage, loading, kitchens, fetchKitchens } = useAdmin();
+    const { API_URL, user } = useApp();
+    
+    // A normal admin's meals are pinned to their own kitchen server-side;
+    // a super_admin has to pick one.
+    const isSuperAdmin = user?.role === 'super_admin';
     
     const [showModal, setShowModal] = useState(false);
     const [editingMeal, setEditingMeal] = useState(null);
@@ -24,14 +29,26 @@ const MealsManagement = () => {
         tags: '',
         weeklyPrice: '',
         monthlyPrice: '',
-        isAvailable: true
+        isAvailable: true,
+        kitchen: ''
     });
     const [uploading, setUploading] = useState(false);
     const [deleteConfirm, setDeleteConfirm] = useState({ show: false, meal: null });
 
+    // A non-super admin can only write to their own kitchen, so don't list others'
+    const ownKitchenParam = isSuperAdmin ? undefined : (user?.kitchen || undefined);
+
     useEffect(() => {
-        fetchMeals({ search, category: categoryFilter !== 'all' ? categoryFilter : undefined });
-    }, [fetchMeals, categoryFilter]);
+        fetchMeals({
+            search,
+            category: categoryFilter !== 'all' ? categoryFilter : undefined,
+            kitchen: ownKitchenParam
+        });
+    }, [fetchMeals, categoryFilter, ownKitchenParam]);
+
+    useEffect(() => {
+        if (isSuperAdmin) fetchKitchens();
+    }, [isSuperAdmin, fetchKitchens]);
 
     useEffect(() => {
         if (!showModal) return;
@@ -48,7 +65,11 @@ const MealsManagement = () => {
 
     const handleSearch = (e) => {
         e.preventDefault();
-        fetchMeals({ search, category: categoryFilter !== 'all' ? categoryFilter : undefined });
+        fetchMeals({
+            search,
+            category: categoryFilter !== 'all' ? categoryFilter : undefined,
+            kitchen: ownKitchenParam
+        });
     };
 
     const resetForm = () => {
@@ -63,7 +84,8 @@ const MealsManagement = () => {
             tags: '',
             weeklyPrice: '',
             monthlyPrice: '',
-            isAvailable: true
+            isAvailable: true,
+            kitchen: ''
         });
         setEditingMeal(null);
     };
@@ -82,7 +104,8 @@ const MealsManagement = () => {
                 tags: meal.tags?.join(', ') || '',
                 weeklyPrice: meal.weeklyPrice || '',
                 monthlyPrice: meal.monthlyPrice || '',
-                isAvailable: meal.isAvailable
+                isAvailable: meal.isAvailable,
+                kitchen: getKitchenId(meal) || ''
             });
         } else {
             resetForm();
@@ -122,6 +145,7 @@ const MealsManagement = () => {
         
         const mealData = {
             ...formData,
+            kitchen: isSuperAdmin ? formData.kitchen || undefined : undefined,
             price: parseFloat(formData.price),
             preparationTime: formData.preparationTime ? parseInt(formData.preparationTime) : undefined,
             weeklyPrice: formData.weeklyPrice ? parseFloat(formData.weeklyPrice) : undefined,
@@ -246,6 +270,12 @@ const MealsManagement = () => {
                             </div>
                             <div className="p-4">
                                 <h3 className="font-semibold text-gray-900">{meal.name}</h3>
+                                {getKitchenName(meal) && (
+                                    <div className="flex items-center space-x-1 text-xs text-gray-500 mt-1">
+                                        <ChefHat className="w-3.5 h-3.5" />
+                                        <span>{getKitchenName(meal)}</span>
+                                    </div>
+                                )}
                                 <p className="text-gray-500 text-sm line-clamp-2 mt-1">{meal.description}</p>
                                 <p className="text-orange-600 font-bold mt-2">₹{meal.price}</p>
                                 
@@ -355,6 +385,23 @@ const MealsManagement = () => {
                                     </select>
                                 </div>
                             </div>
+
+                            {isSuperAdmin && (
+                                <div>
+                                    <label className="block text-sm font-medium text-gray-700 mb-1">Kitchen *</label>
+                                    <select
+                                        value={formData.kitchen}
+                                        onChange={(e) => setFormData({ ...formData, kitchen: e.target.value })}
+                                        className="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-orange-300"
+                                        required
+                                    >
+                                        <option value="">Select a kitchen</option>
+                                        {kitchens.map(kitchen => (
+                                            <option key={kitchen._id} value={kitchen._id}>{kitchen.name}</option>
+                                        ))}
+                                    </select>
+                                </div>
+                            )}
 
                             <div>
                                 <label className="block text-sm font-medium text-gray-700 mb-1">Description *</label>
