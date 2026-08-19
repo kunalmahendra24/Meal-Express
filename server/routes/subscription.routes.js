@@ -11,11 +11,14 @@ import {
 } from '../controller/subscription.controller.js';
 import authMiddleware from '../middleware/user.auth.js';
 import adminMiddleware from '../middleware/admin.auth.js';
+import { validate } from '../validators/validate.js';
+import { createSubscriptionSchema } from '../validators/subscription.validators.js';
 
 const router = express.Router();
 
 // User routes
-router.post('/', authMiddleware, createSubscription);
+// Schema guard runs before the controller so a bad plan type or date can't reach the pricing logic
+router.post('/', authMiddleware, validate(createSubscriptionSchema), createSubscription);
 router.get('/my-subscriptions', authMiddleware, getUserSubscriptions);
 router.get('/my-subscriptions/:id', authMiddleware, getSubscriptionById);
 router.patch('/:id/pause', authMiddleware, pauseSubscription);

@@ -14,29 +14,12 @@ export const getCookieOptions = () => {
     };
 };
 
+// Auth rides only on the httpOnly cookie, so a token is never exposed to client-side JS
 export const getTokenFromRequest = (req) => {
-    if (req.cookies?.token) {
-        return req.cookies.token;
-    }
-
-    const header = req.headers.authorization || '';
-    if (header.startsWith('Bearer ')) {
-        return header.slice(7).trim();
-    }
-
-    return null;
+    return req.cookies?.token || null;
 };
 
 export const getTokenFromSocket = (socket) => {
-    if (socket.handshake.auth?.token) {
-        return socket.handshake.auth.token;
-    }
-
-    const header = socket.handshake.headers.authorization || '';
-    if (header.startsWith('Bearer ')) {
-        return header.slice(7).trim();
-    }
-
     const rawCookie = socket.handshake.headers.cookie;
     if (rawCookie) {
         const parsed = cookie.parse(rawCookie);

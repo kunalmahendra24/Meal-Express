@@ -67,11 +67,11 @@ export const register = async (req, res) => {
             text: `Hello ${user.name},\n\nWelcome to Meal Express! We're excited to have you on board.\n\nBest regards,\nThe Meal Express Team`
         });
 
+        // The token only travels in the httpOnly cookie, never in the response body
         return res.status(201).json({
             success: true,
             message: "User registered successfully",
-            user: sanitizeUser(user),
-            token
+            user: sanitizeUser(user)
         });
     } catch (error) {
         res.status(500).json({ success: false, message: "Server error", error: error.message });
@@ -108,11 +108,11 @@ export const login = async (req, res) => {
         user.lastLogin = new Date();
         await user.save();
 
+        // The token only travels in the httpOnly cookie, never in the response body
         return res.status(200).json({
             success: true,
             message: "Login successful",
-            user: sanitizeUser(user),
-            token
+            user: sanitizeUser(user)
         });
     } catch (error) {
         res.status(500).json({ success: false, message: "Server error", error: error.message });
@@ -176,7 +176,8 @@ export const sendVerifyOtp = async (req, res) => {
         }
 
         const otp = Math.floor(100000 + Math.random() * 900000).toString();
-        user.verifyOtp = otp;
+        // Store only a hash so a database/log leak can't be replayed as a valid OTP
+        user.verifyOtp = await bcrypt.hash(otp, 10);
         user.verifyOtpExpireAt = Date.now() + 10 * 60 * 1000;
         await user.save();
 
@@ -211,7 +212,8 @@ export const verifyAccount = async (req, res) => {
         if (user.isAccountVerified) {
             return res.status(400).json({ success: false, message: "Account already verified" });
         }
-        if (user.verifyOtp !== otp) {
+        // verifyOtp is a bcrypt hash, so compare instead of matching strings
+        if (!user.verifyOtp || !(await bcrypt.compare(String(otp), user.verifyOtp))) {
             return res.status(400).json({ success: false, message: "Invalid OTP" });
         }
         if (user.verifyOtpExpireAt < Date.now()) {
@@ -240,7 +242,8 @@ export const sendResetOtp = async (req, res) => {
         }
 
         const otp = Math.floor(100000 + Math.random() * 900000).toString();
-        user.resetOtp = otp;
+        // Store only a hash so a database/log leak can't be replayed to hijack the reset flow
+        user.resetOtp = await bcrypt.hash(otp, 10);
         user.resetOtpExpireAt = Date.now() + 10 * 60 * 1000;
         await user.save();
 
@@ -277,7 +280,8 @@ export const resetPassword = async (req, res) => {
         if (!user) {
             return res.status(400).json({ success: false, message: "User does not exist" });
         }
-        if (!user.resetOtp || user.resetOtp !== otp) {
+        // resetOtp is a bcrypt hash, so compare instead of matching strings
+        if (!user.resetOtp || !(await bcrypt.compare(String(otp), user.resetOtp))) {
             return res.status(400).json({ success: false, message: "Invalid OTP" });
         }
         if (user.resetOtpExpireAt < Date.now()) {

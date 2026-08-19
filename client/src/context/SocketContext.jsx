@@ -1,6 +1,6 @@
 import { createContext, useContext, useEffect, useRef, useState } from 'react';
 import { io } from 'socket.io-client';
-import { useApp, getAuthToken } from './AppContext';
+import { useApp } from './AppContext';
 
 const SocketContext = createContext(null);
 
@@ -23,12 +23,10 @@ export const SocketProvider = ({ children }) => {
             return;
         }
 
+        // withCredentials sends the httpOnly token cookie with the handshake; no token is passed in JS
         const instance = io(API_URL, {
             withCredentials: true,
-            transports: ['websocket', 'polling'],
-            auth: {
-                token: getAuthToken()
-            }
+            transports: ['websocket', 'polling']
         });
 
         socketRef.current = instance;

@@ -82,6 +82,7 @@ const userSchema = new mongoose.Schema({
         type: mongoose.Schema.Types.ObjectId,
         ref: 'Meal'
     }],
+    // Stores a bcrypt hash of the OTP, never the code itself
     verifyOtp: {
         type: String,
         default: '',     
@@ -94,6 +95,7 @@ const userSchema = new mongoose.Schema({
         type: Boolean,
         default: false,
     },  
+    // Stores a bcrypt hash of the OTP, never the code itself
     resetOtp: {
         type: String,
         default: '',        

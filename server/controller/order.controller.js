@@ -8,9 +8,23 @@ export const createOrder = async (req, res) => {
     try {
         const { items, deliveryAddress, paymentMethod, deliveryInstructions } = req.body;
         
-        if (!items || items.length === 0) {
+        if (!Array.isArray(items) || items.length === 0) {
             return res.status(400).json({ success: false, message: 'No items in order' });
         }
+        
+        // Reject 0, negative and fractional quantities before they reach the price math
+        for (const item of items) {
+            if (!Number.isInteger(item.quantity) || item.quantity < 1) {
+                return res.status(400).json({
+                    success: false,
+                    message: `Invalid quantity for meal: ${item.mealId}`
+                });
+            }
+        }
+        
+        // One query for the whole cart instead of a findById per line item (N+1)
+        const meals = await Meal.find({ _id: { $in: items.map(item => item.mealId) } });
+        const mealsById = new Map(meals.map(meal => [meal._id.toString(), meal]));
         
         // Validate and calculate total
         let totalAmount = 0;
@@ -18,7 +32,7 @@ export const createOrder = async (req, res) => {
         const kitchenIds = new Set();
         
         for (const item of items) {
-            const meal = await Meal.findById(item.mealId);
+            const meal = mealsById.get(String(item.mealId));
             if (!meal) {
                 return res.status(404).json({ 
                     success: false, 

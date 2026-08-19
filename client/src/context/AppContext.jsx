@@ -7,30 +7,9 @@ const AppContext = createContext();
 
 // API base URL
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:4000';
-const AUTH_TOKEN_KEY = 'mealExpressAuthToken';
 
-// Configure axios defaults
+// Auth rides entirely on the httpOnly token cookie, so credentials must be sent with every request
 axios.defaults.withCredentials = true;
-
-axios.interceptors.request.use((config) => {
-    const token = localStorage.getItem(AUTH_TOKEN_KEY);
-    if (token) {
-        config.headers.Authorization = `Bearer ${token}`;
-    }
-    return config;
-});
-
-const persistAuthToken = (token) => {
-    if (token) {
-        localStorage.setItem(AUTH_TOKEN_KEY, token);
-    }
-};
-
-const clearAuthToken = () => {
-    localStorage.removeItem(AUTH_TOKEN_KEY);
-};
-
-export const getAuthToken = () => localStorage.getItem(AUTH_TOKEN_KEY);
 
 export const AppProvider = ({ children }) => {
     // Auth state
@@ -79,7 +58,6 @@ export const AppProvider = ({ children }) => {
         } catch (err) {
             const status = err.response?.status;
             if (status === 401 || status === 403) {
-                clearAuthToken();
                 setUser(null);
                 setIsAuthenticated(false);
             }
@@ -93,7 +71,6 @@ export const AppProvider = ({ children }) => {
             setLoading(true);
             const response = await axios.post(`${API_URL}/api/auth/login`, { email, password });
             if (response.data.success) {
-                persistAuthToken(response.data.token);
                 setUser(response.data.user);
                 setIsAuthenticated(true);
                 toast.success('Login successful!');
@@ -116,7 +93,6 @@ export const AppProvider = ({ children }) => {
             setLoading(true);
             const response = await axios.post(`${API_URL}/api/auth/register`, { name, email, password });
             if (response.data.success) {
-                persistAuthToken(response.data.token);
                 setUser(response.data.user);
                 setIsAuthenticated(true);
                 toast.success('Registration successful!');
@@ -136,12 +112,12 @@ export const AppProvider = ({ children }) => {
 
     const logout = async () => {
         try {
+            // Only the server can clear the httpOnly cookie, so this call is what actually logs out
             await axios.post(`${API_URL}/api/auth/logout`);
             toast.success('Logged out successfully');
         } catch (error) {
             console.error('Logout error:', error);
         } finally {
-            clearAuthToken();
             setUser(null);
             setIsAuthenticated(false);
         }

@@ -1,6 +1,7 @@
 import express from 'express';
 import dotenv from 'dotenv';
 import cors from 'cors';
+import helmet from 'helmet';
 import cookieParser from 'cookie-parser';
 import http from 'http';
 import path from 'path';
@@ -22,6 +23,15 @@ import adminRouter from './routes/admin.routes.js';
 
 dotenv.config({ quiet: true });
 
+// Fail fast instead of booting an app that can't sign tokens or reach the database
+const requiredEnvVars = ['MONGODB_URI', 'JWT_SECRET'];
+const missingEnvVars = requiredEnvVars.filter((name) => !process.env[name]);
+if (missingEnvVars.length > 0) {
+    console.error(`Missing required environment variable(s): ${missingEnvVars.join(', ')}`);
+    console.error('Set them in the deployment environment, or copy server/.env.example to server/.env locally.');
+    process.exit(1);
+}
+
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
@@ -33,6 +43,8 @@ if (!fs.existsSync(uploadsDir)) {
 }
 
 const app = express();
+// Behind a hosting proxy, req.ip must come from X-Forwarded-For or every client shares one rate-limit bucket
+app.set('trust proxy', 1);
 const server = http.createServer(app);
 const port = process.env.PORT || 4000;
 
@@ -42,6 +54,11 @@ const allowedOrigins = [
     'http://127.0.0.1:5173',
     process.env.FRONTEND_URL
 ].filter(Boolean);
+
+// Security headers first; CORP is relaxed so the client origin can still render /uploads images
+app.use(helmet({
+    crossOriginResourcePolicy: { policy: 'cross-origin' }
+}));
 
 app.use(cors({
     origin: function(origin, callback) {

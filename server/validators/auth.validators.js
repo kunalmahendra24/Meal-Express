@@ -1,0 +1,13 @@
+import { z } from 'zod';
+
+// Mirrors the existing controller checks so behaviour is unchanged, only enforced earlier
+export const registerSchema = z.object({
+    name: z.string().trim().min(1, 'Name is required'),
+    email: z.string().trim().min(1, 'Email is required').email('A valid email is required'),
+    password: z.string().min(6, 'Password must be at least 6 characters')
+});
+
+export const loginSchema = z.object({
+    email: z.string().trim().min(1, 'Email is required').email('A valid email is required'),
+    password: z.string().min(1, 'Password is required')
+});
