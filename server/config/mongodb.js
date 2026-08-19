@@ -11,7 +11,7 @@ export const connectDB = async () => {
   const mongodbUri = process.env.MONGODB_URI;
 
   if (!mongodbUri) {
-    console.error("MONGODB_URI is not set. Add it in Render Environment, or copy server/.env.example to server/.env locally.");
+    console.error("MONGODB_URI is not set. Add it in Render Environment, or in server/.env locally.");
     process.exit(1);
   }
 

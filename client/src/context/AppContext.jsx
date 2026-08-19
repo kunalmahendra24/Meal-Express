@@ -1,4 +1,4 @@
-import { createContext, useContext, useState, useEffect } from 'react';
+import { createContext, useContext, useState, useEffect, useRef } from 'react';
 import axios from 'axios';
 import { toast } from 'react-toastify';
 import { getKitchenId } from '../utils/kitchen';
@@ -36,6 +36,13 @@ export const AppProvider = ({ children }) => {
     // Loading states
     const [loading, setLoading] = useState(false);
 
+    // Read inside the axios interceptor, which is installed once and would otherwise close
+    // over a stale value of isAuthenticated
+    const isAuthenticatedRef = useRef(false);
+    useEffect(() => {
+        isAuthenticatedRef.current = isAuthenticated;
+    }, [isAuthenticated]);
+
     // Save cart to localStorage whenever it changes
     useEffect(() => {
         localStorage.setItem('mealExpressCart', JSON.stringify(cart));
@@ -45,6 +52,33 @@ export const AppProvider = ({ children }) => {
     useEffect(() => {
         checkAuth();
         fetchPublicSettings();
+    }, []);
+
+    // The cookie can expire mid-session, and every screen has several requests in flight.
+    // Handle that in one place so the user gets a single notice instead of one per request.
+    useEffect(() => {
+        const interceptorId = axios.interceptors.response.use(
+            (response) => response,
+            (error) => {
+                if (error.response?.status === 401) {
+                    // Lets callers skip their own toast for this error
+                    error.sessionExpired = true;
+
+                    // A guest browsing public pages is not an expired session
+                    if (isAuthenticatedRef.current) {
+                        setUser(null);
+                        setIsAuthenticated(false);
+                        // Fixed id means repeat calls collapse into the one visible toast
+                        toast.info('Your session has ended. Please log in again.', {
+                            toastId: 'session-ended'
+                        });
+                    }
+                }
+                return Promise.reject(error);
+            }
+        );
+
+        return () => axios.interceptors.response.eject(interceptorId);
     }, []);
 
     // Auth functions
@@ -76,12 +110,11 @@ export const AppProvider = ({ children }) => {
                 toast.success('Login successful!');
                 return { success: true };
             }
+            // No toast: the caller renders this inline, next to the fields the user must fix
             const message = response.data.message || 'Login failed';
-            toast.error(message);
             return { success: false, message };
         } catch (error) {
             const message = error.response?.data?.message || 'Login failed';
-            toast.error(message);
             return { success: false, message };
         } finally {
             setLoading(false);
@@ -98,12 +131,11 @@ export const AppProvider = ({ children }) => {
                 toast.success('Registration successful!');
                 return { success: true };
             }
+            // No toast: the caller renders this inline, next to the fields the user must fix
             const message = response.data.message || 'Registration failed';
-            toast.error(message);
             return { success: false, message };
         } catch (error) {
             const message = error.response?.data?.message || 'Registration failed';
-            toast.error(message);
             return { success: false, message };
         } finally {
             setLoading(false);

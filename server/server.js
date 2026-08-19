@@ -27,7 +27,7 @@ const requiredEnvVars = ['MONGODB_URI', 'JWT_SECRET'];
 const missingEnvVars = requiredEnvVars.filter((name) => !process.env[name]);
 if (missingEnvVars.length > 0) {
     console.error(`Missing required environment variable(s): ${missingEnvVars.join(', ')}`);
-    console.error('Set them in the deployment environment, or copy server/.env.example to server/.env locally.');
+    console.error('Set them in the deployment environment, or add them to server/.env locally.');
     process.exit(1);
 }
 

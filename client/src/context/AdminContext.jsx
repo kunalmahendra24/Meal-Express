@@ -2,6 +2,7 @@ import { createContext, useContext, useState, useCallback, useRef } from 'react'
 import axios from 'axios';
 import { toast } from 'react-toastify';
 import { useApp } from './AppContext';
+import { notifyRequestError } from '../utils/requestError';
 
 const AdminContext = createContext();
 
@@ -42,7 +43,7 @@ export const AdminProvider = ({ children }) => {
                 setDashboardStats(response.data.data);
             }
         } catch (error) {
-            toast.error('Failed to fetch dashboard stats');
+            notifyRequestError(error, 'Could not load dashboard stats.');
             setDashboardStats({
                 overview: { totalUsers: 0, totalMeals: 0, totalOrders: 0 },
                 orders: { today: 0, thisWeek: 0, thisMonth: 0 },
@@ -65,7 +66,7 @@ export const AdminProvider = ({ children }) => {
                 setKitchens(response.data.data);
             }
         } catch (error) {
-            toast.error('Failed to fetch kitchens');
+            notifyRequestError(error, 'Could not load kitchens.');
         }
     }, [API_URL]);
 
@@ -79,7 +80,7 @@ export const AdminProvider = ({ children }) => {
             }
             return { success: false };
         } catch (error) {
-            toast.error(error.response?.data?.message || 'Failed to create kitchen');
+            notifyRequestError(error, 'Could not create the kitchen.');
             return { success: false };
         }
     };
@@ -94,7 +95,7 @@ export const AdminProvider = ({ children }) => {
             }
             return { success: false };
         } catch (error) {
-            toast.error(error.response?.data?.message || 'Failed to update kitchen');
+            notifyRequestError(error, 'Could not update the kitchen.');
             return { success: false };
         }
     };
@@ -109,7 +110,7 @@ export const AdminProvider = ({ children }) => {
             }
             return { success: false };
         } catch (error) {
-            toast.error(error.response?.data?.message || 'Failed to update kitchen staff');
+            notifyRequestError(error, 'Could not update kitchen staff.');
             return { success: false };
         }
     };
@@ -125,7 +126,7 @@ export const AdminProvider = ({ children }) => {
                 setPagination(response.data.pagination);
             }
         } catch (error) {
-            toast.error('Failed to fetch meals');
+            notifyRequestError(error, 'Could not load meals.');
         } finally {
             setLoading(false);
         }
@@ -143,7 +144,7 @@ export const AdminProvider = ({ children }) => {
                 return { success: true, data: response.data.data };
             }
         } catch (error) {
-            toast.error(error.response?.data?.message || 'Failed to create meal');
+            notifyRequestError(error, 'Could not create the meal.');
             return { success: false };
         } finally {
             setLoading(false);
@@ -160,7 +161,7 @@ export const AdminProvider = ({ children }) => {
                 return { success: true };
             }
         } catch (error) {
-            toast.error(error.response?.data?.message || 'Failed to update meal');
+            notifyRequestError(error, 'Could not update the meal.');
             return { success: false };
         } finally {
             setLoading(false);
@@ -176,7 +177,7 @@ export const AdminProvider = ({ children }) => {
                 return { success: true };
             }
         } catch (error) {
-            toast.error('Failed to delete meal');
+            notifyRequestError(error, 'Could not delete the meal.');
             return { success: false };
         }
     };
@@ -189,7 +190,7 @@ export const AdminProvider = ({ children }) => {
                 refreshMeals();
             }
         } catch (error) {
-            toast.error('Failed to toggle availability');
+            notifyRequestError(error, 'Could not change availability.');
         }
     };
 
@@ -204,7 +205,7 @@ export const AdminProvider = ({ children }) => {
                 setPagination(response.data.pagination);
             }
         } catch (error) {
-            toast.error('Failed to fetch orders');
+            notifyRequestError(error, 'Could not load orders.');
         } finally {
             setLoading(false);
         }
@@ -221,7 +222,7 @@ export const AdminProvider = ({ children }) => {
                 return { success: true };
             }
         } catch (error) {
-            toast.error('Failed to update order status');
+            notifyRequestError(error, 'Could not update the order status.');
             return { success: false };
         }
     };
@@ -236,7 +237,7 @@ export const AdminProvider = ({ children }) => {
                 setPagination(response.data.pagination);
             }
         } catch (error) {
-            toast.error('Failed to fetch users');
+            notifyRequestError(error, 'Could not load users.');
         } finally {
             setLoading(false);
         }
@@ -251,7 +252,7 @@ export const AdminProvider = ({ children }) => {
                 return { success: true };
             }
         } catch (error) {
-            toast.error('Failed to update user role');
+            notifyRequestError(error, 'Could not update the user role.');
             return { success: false };
         }
     };
@@ -264,7 +265,7 @@ export const AdminProvider = ({ children }) => {
                 fetchUsers();
             }
         } catch (error) {
-            toast.error('Failed to toggle user status');
+            notifyRequestError(error, 'Could not change the account status.');
         }
     };
 
@@ -277,7 +278,7 @@ export const AdminProvider = ({ children }) => {
                 setSettings(response.data.data);
             }
         } catch (error) {
-            toast.error('Failed to fetch settings');
+            notifyRequestError(error, 'Could not load settings.');
         } finally {
             setLoading(false);
         }
@@ -292,7 +293,7 @@ export const AdminProvider = ({ children }) => {
                 return { success: true };
             }
         } catch (error) {
-            toast.error('Failed to update setting');
+            notifyRequestError(error, 'Could not save that setting.');
             return { success: false };
         }
     };
@@ -306,7 +307,7 @@ export const AdminProvider = ({ children }) => {
                 return { success: true };
             }
         } catch (error) {
-            toast.error('Failed to update owner phone');
+            notifyRequestError(error, 'Could not update the owner phone number.');
             return { success: false };
         }
     };
@@ -319,7 +320,7 @@ export const AdminProvider = ({ children }) => {
                 fetchSettings();
             }
         } catch (error) {
-            toast.error('Failed to toggle call owner');
+            notifyRequestError(error, 'Could not change the Call Owner setting.');
         }
     };
 
@@ -340,7 +341,7 @@ export const AdminProvider = ({ children }) => {
             return { success: false };
         } catch (error) {
             console.error('Upload error:', error);
-            toast.error(error.response?.data?.message || 'Failed to upload image');
+            notifyRequestError(error, 'Could not upload the image.');
             return { success: false };
         }
     };

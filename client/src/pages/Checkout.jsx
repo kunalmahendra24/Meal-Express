@@ -29,6 +29,9 @@ const Checkout = () => {
     const [fetchingAddresses, setFetchingAddresses] = useState(true);
     const [showAddAddress, setShowAddAddress] = useState(false);
     const [upiCopied, setUpiCopied] = useState(false);
+    // Shown in the summary card beside the button rather than as a toast, so it stays put
+    // while the user fixes it
+    const [orderError, setOrderError] = useState('');
     // One key per checkout attempt, so a retry of the same order is deduplicated server-side
     const [idempotencyKey, setIdempotencyKey] = useState(() => crypto.randomUUID());
     const [newAddress, setNewAddress] = useState({
@@ -122,19 +125,21 @@ const Checkout = () => {
     };
 
     const handlePlaceOrder = async () => {
+        setOrderError('');
+
         if (hasMixedKitchens) {
-            toast.error('An order can only contain items from one kitchen');
+            setOrderError('An order can only contain items from one kitchen.');
             return;
         }
 
         if (!selectedAddress) {
-            toast.error('Please select a delivery address');
+            setOrderError('Please select a delivery address above.');
             return;
         }
 
         const address = addresses.find(a => a._id === selectedAddress);
         if (!address) {
-            toast.error('Selected address not found');
+            setOrderError('That delivery address is no longer available. Please pick another.');
             return;
         }
 
@@ -168,7 +173,10 @@ const Checkout = () => {
                 navigate(`/orders/${response.data.data._id}`);
             }
         } catch (error) {
-            toast.error(error.response?.data?.message || 'Failed to place order');
+            setOrderError(
+                error.response?.data?.message ||
+                'We could not place your order just now. Please try again.'
+            );
         } finally {
             setLoading(false);
         }
@@ -513,6 +521,13 @@ const Checkout = () => {
                                     <span className="text-orange-600">₹{finalTotal}</span>
                                 </div>
                             </div>
+
+                            {orderError && (
+                                <div className="flex items-start space-x-2 mt-6 p-3 bg-red-50 border border-red-200 rounded-lg">
+                                    <AlertTriangle className="w-4 h-4 text-red-500 flex-shrink-0 mt-0.5" />
+                                    <p className="text-sm text-red-600">{orderError}</p>
+                                </div>
+                            )}
 
                             <button
                                 onClick={handlePlaceOrder}

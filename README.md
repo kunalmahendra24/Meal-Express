@@ -85,41 +85,21 @@ cd meal-express
 2. **Setup Backend**
 ```bash
 cd server
-cp .env.example .env
-# Edit .env with your configuration
 npm install
 ```
+
+Create a `server/.env` with your own configuration. The server refuses to boot if a required
+variable is missing and names the ones it needs.
 
 3. **Setup Frontend**
 ```bash
 cd client
-cp .env.example .env
-# Edit .env if needed
 npm install
 ```
 
-4. **Configure Environment Variables**
+Create a `client/.env` pointing at your backend.
 
-Backend `.env`:
-```env
-PORT=4000
-NODE_ENV=development
-MONGODB_URI=mongodb://localhost:27017/meal-express
-JWT_SECRET=your-secret-key
-SMTP_HOST=smtp.gmail.com
-SMTP_PORT=587
-SMTP_USER=your-email@gmail.com
-SMTP_PASS=your-app-password
-SENDER_EMAIL=noreply@mealexpress.com
-FRONTEND_URL=http://localhost:5173
-```
-
-Frontend `.env`:
-```env
-VITE_API_URL=http://localhost:4000
-```
-
-5. **Run the Application**
+4. **Run the Application**
 
 Start Backend:
 ```bash
@@ -133,7 +113,7 @@ cd client
 npm run dev
 ```
 
-6. **Access the Application**
+5. **Access the Application**
 - Frontend: http://localhost:5173
 - Backend API: http://localhost:4000
 
@@ -237,7 +217,7 @@ The application initializes with these default settings:
 3. Ensure MongoDB connection string is set
 
 ### Frontend (e.g., Vercel, Netlify)
-1. Set `VITE_API_URL` to your backend URL
+1. Set the API base URL environment variable to your backend URL
 2. Deploy the `client` directory
 3. Configure build command: `npm run build`
 4. Configure output directory: `dist`
