@@ -11,6 +11,8 @@ const KitchensManagement = () => {
     const { user } = useApp();
 
     const isSuperAdmin = user?.role === 'super_admin';
+    // An admin fetches only their own kitchen, so an empty list means they have none yet
+    const canCreateKitchen = isSuperAdmin || kitchens.length === 0;
 
     const [showModal, setShowModal] = useState(false);
     const [editingKitchen, setEditingKitchen] = useState(null);
@@ -91,16 +93,18 @@ const KitchensManagement = () => {
                     <p className="text-gray-500 text-sm mt-1">
                         {isSuperAdmin
                             ? 'Create kitchens and assign the admins who staff them'
-                            : 'Your kitchen details'}
+                            : canCreateKitchen
+                                ? 'Set up your own kitchen to start adding meals'
+                                : 'Your kitchen details'}
                     </p>
                 </div>
-                {isSuperAdmin && (
+                {canCreateKitchen && (
                     <button
                         onClick={() => openModal()}
                         className="flex items-center space-x-2 px-4 py-2 bg-orange-500 text-white rounded-lg hover:bg-orange-600"
                     >
                         <Plus className="w-5 h-5" />
-                        <span>Add Kitchen</span>
+                        <span>{isSuperAdmin ? 'Add Kitchen' : 'Create My Kitchen'}</span>
                     </button>
                 )}
             </div>
@@ -111,7 +115,7 @@ const KitchensManagement = () => {
                     <p className="text-gray-500">
                         {isSuperAdmin
                             ? 'No kitchens yet. Create the first one to start onboarding vendors.'
-                            : 'Your account is not linked to a kitchen yet. Ask a super admin to assign you.'}
+                            : 'You do not run a kitchen yet. Create yours to start adding meals.'}
                     </p>
                 </div>
             ) : (

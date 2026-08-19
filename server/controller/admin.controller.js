@@ -2,6 +2,7 @@ import mongoose from 'mongoose';
 import User from '../models/userModel.js';
 import Order from '../models/orderModel.js';
 import Meal from '../models/mealModel.js';
+import { disconnectUserSockets } from '../socket/emit.js';
 
 // Get dashboard statistics
 export const getDashboardStats = async (req, res) => {
@@ -248,7 +249,14 @@ export const updateUserRole = async (req, res) => {
         }
 
         target.role = role;
+        // Demotion must also drop the kitchen, or a re-promotion would silently restore that access
+        if (role === 'user') {
+            target.kitchen = null;
+        }
         await target.save();
+
+        // The old role is cached on any open socket, so close them and let the client reconnect
+        disconnectUserSockets(req.app.get('io'), target._id);
 
         const user = await User.findById(target._id).select('-password -verifyOtp -resetOtp');
 
@@ -263,17 +271,35 @@ export const updateUserRole = async (req, res) => {
     }
 };
 
-// Toggle user active status (admin)
+// Toggle user active status (super admin only)
 export const toggleUserStatus = async (req, res) => {
     try {
+        if (req.params.id === req.userId) {
+            return res.status(400).json({
+                success: false,
+                message: 'You cannot deactivate your own account'
+            });
+        }
+        
         const user = await User.findById(req.params.id);
         
         if (!user) {
             return res.status(404).json({ success: false, message: 'User not found' });
         }
         
+        if (user.role === 'super_admin') {
+            return res.status(403).json({
+                success: false,
+                message: 'Cannot deactivate a super admin'
+            });
+        }
+        
         user.isActive = !user.isActive;
         await user.save();
+        
+        if (!user.isActive) {
+            disconnectUserSockets(req.app.get('io'), user._id);
+        }
         
         res.json({
             success: true,
@@ -304,6 +330,8 @@ export const deleteUser = async (req, res) => {
         }
         
         await User.findByIdAndDelete(req.params.id);
+        
+        disconnectUserSockets(req.app.get('io'), req.params.id);
         
         res.json({
             success: true,

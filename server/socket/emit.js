@@ -27,6 +27,13 @@ const serializeUser = (user) => {
     return user;
 };
 
+// Rooms are joined once at connect time, so a revoked admin keeps their old privileges on an
+// open socket until it drops. Closing it forces a reconnect that re-reads role and isActive.
+export const disconnectUserSockets = (io, userId) => {
+    if (!io || !userId) return;
+    io.in(`user:${userId.toString()}`).disconnectSockets(true);
+};
+
 export const emitOrderNew = (io, order) => {
     if (!io || !order) return;
 

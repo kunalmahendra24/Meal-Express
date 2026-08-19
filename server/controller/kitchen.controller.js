@@ -1,6 +1,7 @@
 import Kitchen from '../models/kitchenModel.js';
 import Meal from '../models/mealModel.js';
 import userModel from '../models/userModel.js';
+import { disconnectUserSockets } from '../socket/emit.js';
 
 // Get all kitchens (public - storefront browses by kitchen)
 export const getAllKitchens = async (req, res) => {
@@ -62,7 +63,9 @@ export const getAdminKitchens = async (req, res) => {
     }
 };
 
-// Create kitchen (super admin)
+const ONE_KITCHEN_ONLY = 'You already run a kitchen, and an admin can only have one';
+
+// Create kitchen (super admin for anyone, or an admin setting up their own single kitchen)
 export const createKitchen = async (req, res) => {
     try {
         const { name, owner, phone, upiId, isActive } = req.body;
@@ -71,8 +74,23 @@ export const createKitchen = async (req, res) => {
             return res.status(400).json({ success: false, message: 'Kitchen name is required' });
         }
 
-        // Default the owner to the creating super_admin when none is given
-        const ownerId = owner || req.userId;
+        const isSuperAdmin = req.userRole === 'super_admin';
+
+        if (!isSuperAdmin) {
+            // Cheap pre-check so the common case fails before anything is written
+            if (req.kitchenId) {
+                return res.status(403).json({ success: false, message: ONE_KITCHEN_ONLY });
+            }
+            if (owner && owner !== req.userId) {
+                return res.status(403).json({
+                    success: false,
+                    message: 'You can only create a kitchen for yourself'
+                });
+            }
+        }
+
+        // Default the owner to the creating admin when none is given
+        const ownerId = isSuperAdmin ? (owner || req.userId) : req.userId;
         const ownerUser = await userModel.findById(ownerId).select('_id role');
         if (!ownerUser) {
             return res.status(404).json({ success: false, message: 'Owner user not found' });
@@ -85,6 +103,20 @@ export const createKitchen = async (req, res) => {
             upiId,
             isActive: isActive !== undefined ? isActive : true
         });
+
+        // A super_admin stays cross-kitchen; an admin is bound to the one they just created.
+        // The null guard is what actually enforces "only one" when two requests race.
+        if (!isSuperAdmin) {
+            const claimed = await userModel.findOneAndUpdate(
+                { _id: req.userId, kitchen: null },
+                { kitchen: kitchen._id }
+            );
+
+            if (!claimed) {
+                await Kitchen.findByIdAndDelete(kitchen._id);
+                return res.status(403).json({ success: false, message: ONE_KITCHEN_ONLY });
+            }
+        }
 
         await kitchen.populate('owner', 'name email phone');
 
@@ -164,6 +196,11 @@ export const setKitchenStaff = async (req, res) => {
 
         if (action === 'remove') {
             user.kitchen = null;
+            // Unstaffing mirrors staffing: without a kitchen an admin has nothing left to manage,
+            // so the privilege goes with it rather than lingering as kitchen-less admin access
+            if (user.role === 'admin') {
+                user.role = 'user';
+            }
         } else {
             user.kitchen = kitchen._id;
             // Staffing a kitchen implies admin privileges
@@ -173,6 +210,8 @@ export const setKitchenStaff = async (req, res) => {
         }
 
         await user.save();
+
+        disconnectUserSockets(req.app.get('io'), user._id);
 
         res.json({
             success: true,

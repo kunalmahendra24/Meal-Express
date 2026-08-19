@@ -7,7 +7,8 @@ import { Search, Users, Shield, Eye, UserCheck, UserX } from 'lucide-react';
 const UsersManagement = () => {
     const { users, fetchUsers, updateUserRole, toggleUserStatus, pagination, loading } = useAdmin();
     const { user: currentUser } = useApp();
-    const canChangeRoles = currentUser?.role === 'super_admin';
+    // Granting and revoking access is super admin only, so a kitchen admin sees this read-only
+    const canManageAccess = currentUser?.role === 'super_admin';
     
     const [search, setSearch] = useState('');
     const [roleFilter, setRoleFilter] = useState('all');
@@ -138,10 +139,10 @@ const UsersManagement = () => {
                                             <p className="text-sm text-gray-500">{user.phone || 'No phone'}</p>
                                         </td>
                                         <td className="px-4 py-4">
-                                            {user.role === 'super_admin' || !canChangeRoles ? (
+                                            {user.role === 'super_admin' || !canManageAccess ? (
                                                 <span
                                                     className={`px-3 py-1 rounded-full text-xs font-medium ${getRoleBadgeColor(user.role)}`}
-                                                    title={!canChangeRoles ? 'Super admin only' : undefined}
+                                                    title={!canManageAccess ? 'Super admin only' : undefined}
                                                 >
                                                     {user.role === 'super_admin' ? 'Super Admin' : user.role === 'admin' ? 'Admin' : 'User'}
                                                 </span>
@@ -180,7 +181,7 @@ const UsersManagement = () => {
                                                 >
                                                     <Eye className="w-4 h-4" />
                                                 </button>
-                                                {user.role !== 'super_admin' && (
+                                                {canManageAccess && user.role !== 'super_admin' && (
                                                     <button
                                                         onClick={() => handleToggleStatus(user._id)}
                                                         className={`p-2 rounded-lg ${

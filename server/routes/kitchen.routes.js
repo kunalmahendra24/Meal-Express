@@ -14,7 +14,8 @@ const router = express.Router();
 
 // Admin routes (declared before /:id so they are not swallowed by it)
 router.get('/admin/all', adminMiddleware, getAdminKitchens);
-router.post('/', superAdminMiddleware, createKitchen);
+// An admin promoted by the super admin may set up their own kitchen, but only one
+router.post('/', adminMiddleware, createKitchen);
 router.put('/:id', adminMiddleware, updateKitchen);
 router.patch('/:id/staff', superAdminMiddleware, setKitchenStaff);
 router.delete('/:id', superAdminMiddleware, deleteKitchen);
