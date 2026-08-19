@@ -127,9 +127,7 @@ export const createMeal = async (req, res) => {
             preparationTime,
             servingSize,
             nutritionInfo,
-            tags,
-            weeklyPrice,
-            monthlyPrice
+            tags
         } = req.body;
         
         const { kitchenId, error } = await resolveKitchenForWrite(req);
@@ -147,8 +145,6 @@ export const createMeal = async (req, res) => {
             servingSize,
             nutritionInfo,
             tags: tags || [],
-            weeklyPrice,
-            monthlyPrice,
             kitchen: kitchenId,
             createdBy: req.userId,
             updatedBy: req.userId

@@ -70,14 +70,9 @@ const orderSchema = new mongoose.Schema({
     actualDeliveryTime: {
         type: Date
     },
-    orderType: {
-        type: String,
-        enum: ['one-time', 'subscription'],
-        default: 'one-time'
-    },
-    subscriptionId: {
-        type: mongoose.Schema.Types.ObjectId,
-        ref: 'Subscription'
+    // Set from the Idempotency-Key header so a retried submit cannot create a second order
+    idempotencyKey: {
+        type: String
     }
 }, { timestamps: true });
 
@@ -86,6 +81,12 @@ orderSchema.index({ user: 1, createdAt: -1 });
 orderSchema.index({ kitchen: 1, createdAt: -1 });
 orderSchema.index({ status: 1 });
 orderSchema.index({ createdAt: -1 });
+
+// Partial so only key-carrying orders are indexed; existing orders without a key are untouched
+orderSchema.index(
+    { user: 1, idempotencyKey: 1 },
+    { unique: true, partialFilterExpression: { idempotencyKey: { $type: 'string' } } }
+);
 
 // Pre-save hook to add status to history without duplicating
 orderSchema.pre('save', function(next) {

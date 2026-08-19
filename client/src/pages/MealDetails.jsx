@@ -5,7 +5,7 @@ import { useApp } from '../context/AppContext';
 import { resolveImageUrl } from '../utils/imageUrl';
 import { getKitchenId } from '../utils/kitchen';
 import LoadingSpinner from '../components/LoadingSpinner';
-import { ArrowLeft, Minus, Plus, ShoppingCart, Star, Clock, Users, Leaf, Drumstick, Calendar, ChefHat, Phone } from 'lucide-react';
+import { ArrowLeft, Minus, Plus, ShoppingCart, Star, Clock, Users, Leaf, Drumstick, ChefHat, Phone } from 'lucide-react';
 
 const MealDetails = () => {
     const { id } = useParams();
@@ -211,30 +211,6 @@ const MealDetails = () => {
                                     <span className="text-3xl font-bold text-orange-600">₹{meal.price}</span>
                                     <span className="text-gray-500">per serving</span>
                                 </div>
-
-                                {/* Subscription Prices */}
-                                {(meal.weeklyPrice || meal.monthlyPrice) && (
-                                    <div className="mt-4 pt-4 border-t border-gray-200">
-                                        <p className="text-sm font-medium text-gray-700 mb-2 flex items-center">
-                                            <Calendar className="w-4 h-4 mr-1" />
-                                            Subscription Plans
-                                        </p>
-                                        <div className="flex space-x-4">
-                                            {meal.weeklyPrice && (
-                                                <div className="px-3 py-2 bg-green-100 rounded-lg">
-                                                    <p className="text-xs text-green-700">Weekly</p>
-                                                    <p className="font-semibold text-green-800">₹{meal.weeklyPrice}/day</p>
-                                                </div>
-                                            )}
-                                            {meal.monthlyPrice && (
-                                                <div className="px-3 py-2 bg-blue-100 rounded-lg">
-                                                    <p className="text-xs text-blue-700">Monthly</p>
-                                                    <p className="font-semibold text-blue-800">₹{meal.monthlyPrice}/day</p>
-                                                </div>
-                                            )}
-                                        </div>
-                                    </div>
-                                )}
                             </div>
 
                             {/* Quantity & Add to Cart */}

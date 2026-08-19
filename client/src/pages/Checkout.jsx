@@ -29,6 +29,8 @@ const Checkout = () => {
     const [fetchingAddresses, setFetchingAddresses] = useState(true);
     const [showAddAddress, setShowAddAddress] = useState(false);
     const [upiCopied, setUpiCopied] = useState(false);
+    // One key per checkout attempt, so a retry of the same order is deduplicated server-side
+    const [idempotencyKey, setIdempotencyKey] = useState(() => crypto.randomUUID());
     const [newAddress, setNewAddress] = useState({
         label: 'Home',
         fullName: '',
@@ -44,6 +46,12 @@ const Checkout = () => {
     const cartTotal = getCartTotal();
     const deliveryCharge = getDeliveryCharge();
     const finalTotal = cartTotal + deliveryCharge;
+
+    // A changed cart is a genuinely different order, so it must not reuse the previous key
+    const cartSignature = cart.map(item => `${item._id}:${item.quantity}`).join('|');
+    useEffect(() => {
+        setIdempotencyKey(crypto.randomUUID());
+    }, [cartSignature]);
 
     // The server rejects multi-kitchen orders, so catch it before we get there
     const hasMixedKitchens = new Set(cart.map(item => getKitchenId(item))).size > 1;
@@ -151,7 +159,9 @@ const Checkout = () => {
                 deliveryInstructions
             };
 
-            const response = await axios.post(`${API_URL}/api/orders`, orderData);
+            const response = await axios.post(`${API_URL}/api/orders`, orderData, {
+                headers: { 'Idempotency-Key': idempotencyKey }
+            });
             if (response.data.success) {
                 clearCart();
                 toast.success('Order placed successfully!');

@@ -17,7 +17,6 @@ import userRouter from './routes/userRoutes.js';
 import mealRouter from './routes/meal.routes.js';
 import kitchenRouter from './routes/kitchen.routes.js';
 import orderRouter from './routes/order.routes.js';
-import subscriptionRouter from './routes/subscription.routes.js';
 import settingsRouter from './routes/settings.routes.js';
 import adminRouter from './routes/admin.routes.js';
 
@@ -109,7 +108,6 @@ app.use('/api/user', userRouter);
 app.use('/api/meals', mealRouter);
 app.use('/api/kitchens', kitchenRouter);
 app.use('/api/orders', orderRouter);
-app.use('/api/subscriptions', subscriptionRouter);
 app.use('/api/settings', settingsRouter);
 app.use('/api/admin', adminRouter);
 

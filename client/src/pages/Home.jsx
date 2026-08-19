@@ -54,8 +54,8 @@ const Home = () => {
         },
         {
             icon: Clock,
-            title: 'Flexible Plans',
-            description: 'Choose one-time orders or subscribe for weekly/monthly plans'
+            title: 'Order Anytime',
+            description: 'Order whenever you like, with no commitment or fixed schedule'
         },
         {
             icon: Heart,
@@ -234,25 +234,6 @@ const Home = () => {
                     </div>
                 </div>
             </section>
-
-            {/* Subscription CTA */}
-            <section className="py-16 bg-gradient-to-r from-orange-500 to-red-500">
-                <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
-                    <h2 className="text-3xl font-bold text-white">Subscribe & Save</h2>
-                    <p className="mt-4 text-orange-100 max-w-2xl mx-auto">
-                        Get up to 20% off with our weekly and monthly subscription plans. 
-                        Enjoy hassle-free daily meals with flexible delivery schedules.
-                    </p>
-                    <Link
-                        to="/menu"
-                        className="inline-flex items-center mt-8 px-6 py-3 bg-white text-orange-600 font-semibold rounded-lg hover:bg-gray-100 transition-all"
-                    >
-                        Explore Subscription Plans
-                        <ArrowRight className="ml-2 w-5 h-5" />
-                    </Link>
-                </div>
-            </section>
-
         </div>
     );
 };

@@ -51,15 +51,6 @@ const mealSchema = new mongoose.Schema({
         average: { type: Number, default: 0, min: 0, max: 5 },
         count: { type: Number, default: 0 }
     },
-    // Subscription pricing
-    weeklyPrice: {
-        type: Number,
-        min: [0, 'Weekly price cannot be negative']
-    },
-    monthlyPrice: {
-        type: Number,
-        min: [0, 'Monthly price cannot be negative']
-    },
     kitchen: {
         type: mongoose.Schema.Types.ObjectId,
         ref: 'Kitchen',

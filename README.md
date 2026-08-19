@@ -10,7 +10,6 @@ A full-stack MERN (MongoDB, Express, React, Node.js) web application for orderin
 - Browse homemade tiffin meals without login
 - View meal details with images, description, price, and category (Veg/Non-Veg/Jain)
 - Add meals to cart and place orders
-- Support for one-time orders and weekly/monthly subscriptions
 - User profile management with saved addresses
 - Order history with status tracking (Pending → Preparing → Out for Delivery → Delivered)
 - "Call Owner" button for direct contact
@@ -218,7 +217,7 @@ The application initializes with these default settings:
 ### User Interface
 - Home Page with featured meals
 - Menu with category filters
-- Meal details with subscription options
+- Meal details with images, pricing, and nutrition info
 - Shopping cart
 - Checkout with address selection
 - Order tracking

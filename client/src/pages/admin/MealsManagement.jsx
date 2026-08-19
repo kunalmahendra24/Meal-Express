@@ -27,8 +27,6 @@ const MealsManagement = () => {
         preparationTime: '',
         servingSize: '1 person',
         tags: '',
-        weeklyPrice: '',
-        monthlyPrice: '',
         isAvailable: true,
         kitchen: ''
     });
@@ -82,8 +80,6 @@ const MealsManagement = () => {
             preparationTime: '',
             servingSize: '1 person',
             tags: '',
-            weeklyPrice: '',
-            monthlyPrice: '',
             isAvailable: true,
             kitchen: ''
         });
@@ -102,8 +98,6 @@ const MealsManagement = () => {
                 preparationTime: meal.preparationTime || '',
                 servingSize: meal.servingSize || '1 person',
                 tags: meal.tags?.join(', ') || '',
-                weeklyPrice: meal.weeklyPrice || '',
-                monthlyPrice: meal.monthlyPrice || '',
                 isAvailable: meal.isAvailable,
                 kitchen: getKitchenId(meal) || ''
             });
@@ -148,8 +142,6 @@ const MealsManagement = () => {
             kitchen: isSuperAdmin ? formData.kitchen || undefined : undefined,
             price: parseFloat(formData.price),
             preparationTime: formData.preparationTime ? parseInt(formData.preparationTime) : undefined,
-            weeklyPrice: formData.weeklyPrice ? parseFloat(formData.weeklyPrice) : undefined,
-            monthlyPrice: formData.monthlyPrice ? parseFloat(formData.monthlyPrice) : undefined,
             tags: formData.tags ? formData.tags.split(',').map(t => t.trim()).filter(Boolean) : []
         };
 
@@ -414,38 +406,16 @@ const MealsManagement = () => {
                                 />
                             </div>
 
-                            <div className="grid sm:grid-cols-3 gap-4">
-                                <div>
-                                    <label className="block text-sm font-medium text-gray-700 mb-1">Price (₹) *</label>
-                                    <input
-                                        type="number"
-                                        value={formData.price}
-                                        onChange={(e) => setFormData({ ...formData, price: e.target.value })}
-                                        className="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-orange-300"
-                                        required
-                                        min="0"
-                                    />
-                                </div>
-                                <div>
-                                    <label className="block text-sm font-medium text-gray-700 mb-1">Weekly Price/day</label>
-                                    <input
-                                        type="number"
-                                        value={formData.weeklyPrice}
-                                        onChange={(e) => setFormData({ ...formData, weeklyPrice: e.target.value })}
-                                        className="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-orange-300"
-                                        min="0"
-                                    />
-                                </div>
-                                <div>
-                                    <label className="block text-sm font-medium text-gray-700 mb-1">Monthly Price/day</label>
-                                    <input
-                                        type="number"
-                                        value={formData.monthlyPrice}
-                                        onChange={(e) => setFormData({ ...formData, monthlyPrice: e.target.value })}
-                                        className="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-orange-300"
-                                        min="0"
-                                    />
-                                </div>
+                            <div>
+                                <label className="block text-sm font-medium text-gray-700 mb-1">Price (₹) *</label>
+                                <input
+                                    type="number"
+                                    value={formData.price}
+                                    onChange={(e) => setFormData({ ...formData, price: e.target.value })}
+                                    className="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-orange-300"
+                                    required
+                                    min="0"
+                                />
                             </div>
 
                             <div className="grid sm:grid-cols-2 gap-4">

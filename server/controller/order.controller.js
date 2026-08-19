@@ -3,10 +3,32 @@ import Meal from '../models/mealModel.js';
 import Settings from '../models/settingsModel.js';
 import { emitOrderNew, emitOrderStatusUpdated } from '../socket/emit.js';
 
+// Returns the order already created for this key, so a retry never places a second one
+const respondWithExistingOrder = async (res, existingOrder) => {
+    await existingOrder.populate('user', 'name email phone');
+    return res.status(200).json({
+        success: true,
+        message: 'Order already placed for this request',
+        data: existingOrder
+    });
+};
+
 // Create new order
 export const createOrder = async (req, res) => {
     try {
         const { items, deliveryAddress, paymentMethod, deliveryInstructions } = req.body;
+        
+        // Optional: absent header keeps the original behaviour untouched
+        const headerKey = req.headers['idempotency-key'];
+        const idempotencyKey = typeof headerKey === 'string' ? headerKey.trim() : '';
+        
+        // Cheap pre-check catches the common double-click before any pricing work
+        if (idempotencyKey) {
+            const existingOrder = await Order.findOne({ user: req.userId, idempotencyKey });
+            if (existingOrder) {
+                return respondWithExistingOrder(res, existingOrder);
+            }
+        }
         
         if (!Array.isArray(items) || items.length === 0) {
             return res.status(400).json({ success: false, message: 'No items in order' });
@@ -104,10 +126,24 @@ export const createOrder = async (req, res) => {
             deliveryAddress,
             paymentMethod: paymentMethod || 'cod',
             deliveryInstructions,
-            estimatedDeliveryTime
+            estimatedDeliveryTime,
+            // Never store an empty string: it would be indexed and collide across keyless orders
+            ...(idempotencyKey ? { idempotencyKey } : {})
         });
         
-        await order.save();
+        try {
+            await order.save();
+        } catch (error) {
+            // Two concurrent submits both cleared the pre-check; the unique index rejected the loser
+            if (error.code === 11000 && idempotencyKey) {
+                const existingOrder = await Order.findOne({ user: req.userId, idempotencyKey });
+                if (existingOrder) {
+                    return respondWithExistingOrder(res, existingOrder);
+                }
+            }
+            throw error;
+        }
+        
         await order.populate('user', 'name email phone');
 
         const io = req.app.get('io');

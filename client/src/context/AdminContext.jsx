@@ -15,7 +15,6 @@ export const AdminProvider = ({ children }) => {
     const [meals, setMeals] = useState([]);
     const [orders, setOrders] = useState([]);
     const [users, setUsers] = useState([]);
-    const [subscriptions, setSubscriptions] = useState([]);
     const [settings, setSettings] = useState([]);
     const [kitchens, setKitchens] = useState([]);
     
@@ -45,7 +44,7 @@ export const AdminProvider = ({ children }) => {
         } catch (error) {
             toast.error('Failed to fetch dashboard stats');
             setDashboardStats({
-                overview: { totalUsers: 0, totalMeals: 0, totalOrders: 0, activeSubscriptions: 0 },
+                overview: { totalUsers: 0, totalMeals: 0, totalOrders: 0 },
                 orders: { today: 0, thisWeek: 0, thisMonth: 0 },
                 revenue: { today: 0, thisWeek: 0, thisMonth: 0, total: 0 },
                 orderStatusBreakdown: {},
@@ -269,22 +268,6 @@ export const AdminProvider = ({ children }) => {
         }
     };
 
-    // Subscription management
-    const fetchSubscriptions = useCallback(async (params = {}) => {
-        try {
-            setLoading(true);
-            const response = await axios.get(`${API_URL}/api/subscriptions/admin/all`, { params });
-            if (response.data.success) {
-                setSubscriptions(response.data.data);
-                setPagination(response.data.pagination);
-            }
-        } catch (error) {
-            toast.error('Failed to fetch subscriptions');
-        } finally {
-            setLoading(false);
-        }
-    }, [API_URL]);
-
     // Settings management
     const fetchSettings = useCallback(async () => {
         try {
@@ -429,10 +412,6 @@ export const AdminProvider = ({ children }) => {
         fetchUsers,
         updateUserRole,
         toggleUserStatus,
-        
-        // Subscriptions
-        subscriptions,
-        fetchSubscriptions,
         
         // Settings
         settings,

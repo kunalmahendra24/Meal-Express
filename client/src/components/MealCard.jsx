@@ -121,11 +121,6 @@ const MealCard = ({ meal, compact = false, showKitchen = true }) => {
                         {getCategoryIcon(meal.category)}
                         <span className="capitalize">{meal.category}</span>
                     </div>
-                    {meal.weeklyPrice && (
-                        <div className="absolute top-3 right-3 bg-orange-500 text-white px-2 py-1 rounded-full text-xs font-medium">
-                            Subscription Available
-                        </div>
-                    )}
                 </div>
             </Link>
 

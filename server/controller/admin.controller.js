@@ -1,7 +1,6 @@
 import mongoose from 'mongoose';
 import User from '../models/userModel.js';
 import Order from '../models/orderModel.js';
-import Subscription from '../models/subscriptionModel.js';
 import Meal from '../models/mealModel.js';
 
 // Get dashboard statistics
@@ -26,7 +25,6 @@ export const getDashboardStats = async (req, res) => {
             totalUsers,
             totalMeals,
             totalOrders,
-            activeSubscriptions,
             todayOrders,
             weekOrders,
             monthOrders
@@ -34,7 +32,6 @@ export const getDashboardStats = async (req, res) => {
             User.countDocuments({ role: 'user' }),
             Meal.countDocuments(kitchenScope),
             Order.countDocuments(kitchenScope),
-            Subscription.countDocuments({ status: 'active' }),
             Order.countDocuments({ ...kitchenScope, createdAt: { $gte: today } }),
             Order.countDocuments({ ...kitchenScope, createdAt: { $gte: startOfWeek } }),
             Order.countDocuments({ ...kitchenScope, createdAt: { $gte: startOfMonth } })
@@ -121,8 +118,7 @@ export const getDashboardStats = async (req, res) => {
                 overview: {
                     totalUsers,
                     totalMeals,
-                    totalOrders,
-                    activeSubscriptions
+                    totalOrders
                 },
                 orders: {
                     today: todayOrders,
@@ -215,16 +211,11 @@ export const getUserDetails = async (req, res) => {
             .sort({ createdAt: -1 })
             .limit(10);
         
-        // Get user's subscriptions
-        const subscriptions = await Subscription.find({ user: user._id })
-            .populate('meal', 'name images');
-        
         res.json({
             success: true,
             data: {
                 user,
-                orders,
-                subscriptions
+                orders
             }
         });
     } catch (error) {
