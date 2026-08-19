@@ -97,6 +97,12 @@ app.get('/', (req, res) => {
     });
 });
 
+// A CDN/proxy fronting /api must never cache a per-user response and serve it to someone else
+app.use('/api', (req, res, next) => {
+    res.set('Cache-Control', 'no-store');
+    next();
+});
+
 // API Routes
 app.use('/api/auth', authRouter);
 app.use('/api/user', userRouter);
